@@ -1,0 +1,80 @@
+# Proyecto Full-Stack: Landing Page (Next.js + Node.js)
+
+Este es un proyecto full-stack que consiste en una landing page moderna construida con Next.js (frontend) y una API de backend construida con Node.js y Express. Ambos servicios están completamente dockerizados y orquestados con Docker Compose para un entorno de desarrollo fácil de gestionar y replicar.
+
+## Arquitectura del Proyecto
+
+El proyecto sigue una arquitectura de microservicios, con una separación clara entre el frontend y el backend, cada uno en su propio contenedor Docker.
+
+* **Frontend**: Construido con **Next.js**, **React**, **TypeScript** y estilizado con **Tailwind CSS**.
+* **Backend**: Una API REST simple construida con **Node.js** y **Express**.
+* **Orquestación**: **Docker Compose** se utiliza para construir, ejecutar y conectar ambos servicios.
+
+### Estructura de Carpetas
+
+```
+/
+├── frontend/           # Contiene la aplicación de Next.js
+│   ├── src/
+│   └── Dockerfile      # Instrucciones para construir el frontend
+├── backend/            # Contiene la API de Node.js/Express
+│   ├── index.js
+│   └── Dockerfile      # Instrucciones para construir el backend
+├── docker-compose.yml  # Orquesta el levantamiento de ambos servicios
+└── README.md           # Esta documentación
+```
+
+## Prerrequisitos
+
+Asegúrate de tener instaladas las siguientes herramientas en tu sistema local:
+
+* [Node.js](https://nodejs.org/) (v18 o superior)
+* [Docker](https://www.docker.com/products/docker-desktop/)
+* [Docker Compose](https://docs.docker.com/compose/install/) (generalmente viene incluido con Docker Desktop)
+
+## Instalación y Puesta en Marcha
+
+Sigue estos pasos para levantar el entorno de desarrollo completo:
+
+1.  **Clona el repositorio**
+    ```bash
+    git clone [URL-DE-TU-REPOSITORIO-EN-GITHU]
+    ```
+
+2.  **Navega a la carpeta del proyecto**
+    ```bash
+    cd Celesta :: SitioWeb
+    ```
+
+3.  **Construye y levanta los contenedores**
+    Este comando leerá el archivo `docker-compose.yml`, construirá las imágenes de ambos servicios y los iniciará.
+    ```bash
+    docker compose up --build
+    ```
+    > **Nota para usuarios de Linux**: Si encuentras un error de `permission denied`, puede que necesites ejecutar el comando con `sudo` (`sudo docker compose up --build`) o [configurar Docker para ejecutarse sin sudo](https://docs.docker.com/engine/install/linux-postinstall/).
+
+## Servicios Disponibles
+
+Una vez que los contenedores estén en funcionamiento, los servicios estarán disponibles en los siguientes puertos:
+
+* **Frontend (Next.js)**: [http://localhost:3000](http://localhost:3000)
+* **Backend (API)**: [http://localhost:3001](http://localhost:3001)
+
+## Uso y Comandos Útiles de Docker Compose
+
+* **Levantar los servicios en segundo plano (detached mode):**
+    ```bash
+    docker compose up -d --build
+    ```
+* **Ver el estado de los contenedores:**
+    ```bash
+    docker compose ps
+    ```
+* **Ver los logs de los servicios:**
+    ```bash
+    docker compose logs -f
+    ```
+* **Detener y eliminar los contenedores:**
+    ```bash
+    docker compose down
+    ```
