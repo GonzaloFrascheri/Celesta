@@ -1,7 +1,7 @@
 steps:
   # 1. Construye la imagen de Docker del backend
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'us-central1-docker.pkg.dev/${PROJECT_ID}/celesta-repo/backend:$SHORT_SHA', '.']
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/${PROJECT_ID}/celesta-repo/backend:$SHORT_SHA', '-f', 'backend/Dockerfile', 'backend/']
 
   # 2. Sube la imagen a Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
