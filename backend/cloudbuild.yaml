@@ -18,3 +18,7 @@ steps:
       - '--region=us-central1'
       - '--platform=managed'
       - '--allow-unauthenticated' # ¡Importante! Permite que sea accesible públicamente
+
+# AÑADE ESTA SECCIÓN PARA FORZAR EL MODO DE LOGGING
+options:
+  logging: CLOUD_LOGGING_ONLY
