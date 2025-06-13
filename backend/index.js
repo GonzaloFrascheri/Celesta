@@ -23,6 +23,8 @@ pool.on('error', (err, client) => {
 
 // --- INICIO DE RUTAS DE LA API ---
 
+/** PROVEEDORES */
+
 // CREATE - Crear un nuevo Proveedor
 app.post('/api/proveedores', async (req, res) => {
   const { id, rut, razon_social, giro } = req.body;
@@ -103,6 +105,8 @@ app.delete('/api/proveedores/:id', async (req, res) => {
   }
 });
 
+/** CLIENTES */
+
 // CREATE - Crear un nuevo Cliente
 app.post('/api/clientes', async (req, res) => {
   const { id, email, nombre, rol } = req.body;
@@ -120,6 +124,67 @@ app.post('/api/clientes', async (req, res) => {
   }
 });
 
+// READ - Obtener todos los Clientes
+app.get('/api/clientes', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM Cliente ORDER BY created_at DESC');
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener clientes:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// READ - Obtener un Cliente por su ID
+app.get('/api/clientes/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM Cliente WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error(`Error al obtener cliente ${id}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// UPDATE - Actualizar un Cliente por su ID
+app.put('/api/clientes/:id', async (req, res) => {
+  const { id } = req.params;
+  const { email, nombre, rol } = req.body; // Solo permitimos actualizar estos campos
+  if (!email && !nombre && !rol) {
+    return res.status(400).json({ error: 'Se requiere al menos un campo para actualizar (email, nombre, rol)' });
+  }
+  try {
+    const query = 'UPDATE Cliente SET email = COALESCE($1, email), nombre = COALESCE($2, nombre), rol = COALESCE($3, rol) WHERE id = $4 RETURNING *';
+    const values = [email, nombre, rol, id];
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado para actualizar' });
+    }
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error(`Error al actualizar cliente ${id}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// DELETE - Eliminar un Cliente por su ID
+app.delete('/api/clientes/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM Cliente WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado para eliminar' });
+    }
+    res.status(200).json({ message: 'Cliente eliminado con éxito', cliente: result.rows[0] });
+  } catch (error) {
+    console.error(`Error al eliminar cliente ${id}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 
 // --- FIN DE RUTAS DE LA API ---
 
