@@ -1,11 +1,15 @@
 require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
+const { BigQuery } = require('@google-cloud/bigquery');
 
 const app = express();
 app.use(express.json()); // Middleware para poder leer JSON en el body
 
 const PORT = process.env.PORT || 3001;
+
+// Configuración de BigQuery 
+const bigquery = new BigQuery();
 
 // Configuración de la conexión a la base de datos
 const pool = new Pool({
@@ -22,7 +26,7 @@ pool.on('error', (err, client) => {
 });
 
 // --- INICIO DE RUTAS DE LA API ---
-
+/** CloudSQL */
 /** PROVEEDORES */
 
 // CREATE - Crear un nuevo Proveedor
@@ -183,6 +187,36 @@ app.delete('/api/clientes/:id', async (req, res) => {
   } catch (error) {
     console.error(`Error al eliminar cliente ${id}:`, error);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+
+/** BigQuery */
+/** COMPRAS */
+
+// CREATE - Crear una nueva Compra
+app.post('/api/compras', async (req, res) => {
+  const compra = req.body; // El objeto JSON que envías desde Postman
+
+  // Validación actualizada con los campos correctos de tu esquema
+  if (!compra.id || !compra.proveedor_id || !compra.monto_total) {
+    return res.status(400).json({ error: 'Los campos id, proveedor_id y monto_total son requeridos' });
+  }
+
+  try {
+    const datasetId = 'celesta_data';
+    const tableId = 'Compras';
+
+    // Inserta la fila en BigQuery. BigQuery mapeará los campos del JSON a las columnas de la tabla.
+    await bigquery.dataset(datasetId).table(tableId).insert(compra);
+    
+    console.log(`Se insertó la compra ${compra.id} en BigQuery.`);
+    res.status(201).json({ message: 'Compra registrada con éxito en BigQuery', data: compra });
+  } catch (error) {
+    console.error('Error al insertar en BigQuery:', error);
+    // BigQuery a veces devuelve errores más detallados que podemos pasar al cliente
+    const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : 'Error interno del servidor';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
