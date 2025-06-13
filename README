@@ -78,6 +78,3 @@ Una vez que los contenedores estén en funcionamiento, los servicios estarán di
     ```bash
     docker compose down
     ```
-
-prueba
-prueba
