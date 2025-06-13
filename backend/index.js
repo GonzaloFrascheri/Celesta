@@ -23,7 +23,7 @@ pool.on('error', (err, client) => {
 
 // --- INICIO DE RUTAS DE LA API ---
 
-// CREATE - Crear un nuevo Proveedor (Ya lo teníamos)
+// CREATE - Crear un nuevo Proveedor
 app.post('/api/proveedores', async (req, res) => {
   const { id, rut, razon_social, giro } = req.body;
   if (!id || !rut || !razon_social) {
@@ -99,6 +99,23 @@ app.delete('/api/proveedores/:id', async (req, res) => {
     res.status(200).json({ message: 'Proveedor eliminado con éxito', proveedor: result.rows[0] });
   } catch (error) {
     console.error(`Error al eliminar proveedor ${id}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// CREATE - Crear un nuevo Cliente
+app.post('/api/clientes', async (req, res) => {
+  const { id, email, nombre, rol } = req.body;
+  if (!id || !email || !nombre) {
+    return res.status(400).json({ error: 'id, email y nombre son requeridos' });
+  }
+  try {
+    const query = 'INSERT INTO Cliente(id, email, nombre, rol, created_at) VALUES($1, $2, $3, $4, NOW()) RETURNING *';
+    const values = [id, email, nombre, rol];
+    const result = await pool.query(query, values);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error al insertar cliente:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
