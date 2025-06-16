@@ -393,6 +393,164 @@ app.post('/api/detalles-compras', async (req, res) => {
   }
 });
 
+// READ - Obtener todos los Detalles de Compras
+app.get('/api/detalles-compras', async (req, res) => {
+  try {
+    const datasetId = 'celesta_data';
+    const tableId = 'Detalles_Compras';
+    const query = `SELECT * FROM \`${datasetId}.${tableId}\``;
+    const [rows] = await bigquery.query(query);
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error al obtener detalles de compras:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// READ - Obtener un Detalle de Compra por su ID
+app.get('/api/detalles-compras/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const datasetId = 'celesta_data';
+    const tableId = 'Detalles_Compras';
+    const query = `SELECT * FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
+    const options = {
+      query: query,
+      params: { id: id },
+    };
+    const [rows] = await bigquery.query(options);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Detalle de compra no encontrado' });
+    }
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error(`Error al obtener detalle de compra ${id}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// UPDATE - Actualizar un Detalle de Compra por su ID
+app.put('/api/detalles-compras/:id', async (req, res) => {
+  const { id } = req.params;
+  const detalleCompra = req.body;
+
+  // Creamos un set de campos dinámico para la consulta UPDATE
+  let setClauses = [];
+  let params = { id: id };
+
+  // Iteramos sobre el cuerpo de la petición para construir la consulta
+  for (const key in detalleCompra) {
+      if (Object.hasOwnProperty.call(detalleCompra, key)) {
+          // Nos aseguramos de no intentar actualizar el 'id'
+          if (key !== 'id') {
+              setClauses.push(`${key} = @${key}`);
+              params[key] = detalleCompra[key];
+          }
+      }
+  }
+
+  if (setClauses.length === 0) {
+      return res.status(400).json({ error: 'Se requiere al menos un campo para actualizar.' });
+  }
+
+  try {
+    const datasetId = 'celesta_data';
+    const tableId = 'Detalles_Compras';
+    const query = `UPDATE \`${datasetId}.${tableId}\` SET ${setClauses.join(', ')} WHERE id = @id`;
+    
+    const options = {
+      query: query,
+      params: params,
+    };
+    
+    await bigquery.query(options);
+    
+    console.log(`Detalle de compra ${id} actualizado en BigQuery.`);
+    // Buscamos el detalle actualizado para devolverlo completo
+    const [updatedRows] = await bigquery.query({
+        query: `SELECT * FROM \`${datasetId}.${tableId}\` WHERE id = @id`,
+        params: { id: id }
+    });
+
+    res.status(200).json({ message: 'Detalle de compra actualizado con éxito', data: updatedRows[0] });
+  } catch (error) {
+    console.error(`Error al actualizar detalle de compra ${id}:`, error);
+    const errorMessage = error.errors ? error.errors.map(e => e.message).join(', ') : 'Error interno del servidor';
+    res.status(500).json({ error: errorMessage });
+  }
+});
+
+// DELETE - Eliminar un Detalle de Compra por su ID
+app.delete('/api/detalles-compras/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const datasetId = 'celesta_data';
+    const tableId = 'Detalles_Compras';
+    const query = `DELETE FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
+    const options = {
+      query: query,
+      params: { id: id },
+    };
+    
+    await bigquery.query(options);
+    
+    console.log(`Detalle de compra ${id} eliminado de BigQuery.`);
+    res.status(200).json({ message: 'Detalle de compra eliminado con éxito' });
+  } catch (error) {
+    console.error(`Error al eliminar detalle de compra ${id}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+
+/** PRODUCTOS MAESTROS (Solo Lectura) */
+// READ - Obtener todos los Productos Maestros
+app.get('/api/productos-maestros', async (req, res) => {
+  try {
+    const datasetId = 'celesta_data';
+    const tableId = 'Productos_Maestros';
+
+    // Hacemos la consulta ordenando por nombre para una mejor visualización
+    const query = `SELECT * FROM \`${datasetId}.${tableId}\` ORDER BY nombre ASC`;
+    
+    const [rows] = await bigquery.query(query);
+
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('❌ Error al obtener productos maestros:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// READ - Obtener un Producto Maestro por su ID
+app.get('/api/productos-maestros/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const datasetId = 'celesta_data';
+    const tableId = 'Productos_Maestros';
+
+    const query = `SELECT * FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
+    const options = {
+      query: query,
+      params: { id: id },
+    };
+
+    const [rows] = await bigquery.query(options);
+
+    // Si no encontramos un producto con ese ID, devolvemos un 404
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Producto Maestro no encontrado' });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error(`❌ Error al obtener producto maestro ${id}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+
 // --- FIN DE RUTAS DE LA API ---
 
 app.listen(PORT, () => {
