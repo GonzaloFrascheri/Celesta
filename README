@@ -1,82 +1,95 @@
 # Proyecto Full-Stack: Landing Page (Next.js + Node.js)
 
-Este es un proyecto full-stack que consiste en una landing page moderna construida con Next.js (frontend) y una API de backend construida con Node.js y Express. Ambos servicios están completamente dockerizados y orquestados con Docker Compose para un entorno de desarrollo fácil de gestionar y replicar.
+[cite_start]Este es un proyecto full-stack que consiste en una interfaz de usuario moderna construida con Next.js y una API de backend con Node.js y Express. El proyecto está completamente dockerizado para el desarrollo y utiliza un pipeline de CI/CD para despliegues automáticos en Google Cloud.
 
-## Arquitectura del Proyecto
+## Arquitectura
 
-El proyecto sigue una arquitectura de microservicios, con una separación clara entre el frontend y el backend, cada uno en su propio contenedor Docker.
+El proyecto se compone de varias piezas clave que trabajan en conjunto.
 
-* **Frontend**: Construido con **Next.js**, **React**, **TypeScript** y estilizado con **Tailwind CSS**.
-* **Backend**: Una API REST simple construida con **Node.js** y **Express**.
-* **Orquestación**: **Docker Compose** se utiliza para construir, ejecutar y conectar ambos servicios.
+* [cite_start]**Frontend**: Construido con **Next.js**, **React**, y **TypeScript**. Se ejecuta como un servicio en **Cloud Run**.
+* [cite_start]**Backend**: Una API REST construida con **Node.js** y **Express**. También se ejecuta como un servicio en **Cloud Run**.
+* **Base de Datos Relacional**: **Cloud SQL (PostgreSQL)** para almacenar datos de usuarios y entidades maestras.
+* **Data Warehouse**: **BigQuery** para almacenar datos transaccionales (compras, precios) para análisis.
+* [cite_start]**Entorno de Desarrollo**: Una **VM en Compute Engine** que ejecuta los servicios con **Docker Compose** para un desarrollo rápido y conectado a los servicios de GCP. 
+* **CI/CD**: **Cloud Build** se activa con cada `git push` a la rama `main` para desplegar automáticamente los servicios a Cloud Run.
 
-### Estructura de Carpetas
+---
 
-```
-/
-├── frontend/           # Contiene la aplicación de Next.js
-│   ├── src/
-│   └── Dockerfile      # Instrucciones para construir el frontend
-├── backend/            # Contiene la API de Node.js/Express
-│   ├── index.js
-│   └── Dockerfile      # Instrucciones para construir el backend
-├── docker-compose.yml  # Orquesta el levantamiento de ambos servicios
-└── README.md           # Esta documentación
-```
+## 🚀 Guía de Inicio y Desarrollo
 
-## Prerrequisitos
+Este proyecto utiliza un entorno de desarrollo remoto en una VM de Google Cloud para asegurar la conectividad con las bases de datos.
 
-Asegúrate de tener instaladas las siguientes herramientas en tu sistema local:
+### 1. Prerrequisitos
 
-* [Node.js](https://nodejs.org/) (v18 o superior)
-* [Docker](https://www.docker.com/products/docker-desktop/)
-* [Docker Compose](https://docs.docker.com/compose/install/) (generalmente viene incluido con Docker Desktop)
+Asegúrate de tener instaladas las siguientes herramientas en tu **máquina local**:
 
-## Instalación y Puesta en Marcha
+* [Git](https://git-scm.com/)
+* [Google Cloud SDK (gcloud)](https://cloud.google.com/sdk/docs/install)
+* Un editor de código como [VS Code](https://code.visualstudio.com/).
 
-Sigue estos pasos para levantar el entorno de desarrollo completo:
+### 2. Configuración Inicial del Entorno (Hacer una sola vez)
 
-1.  **Clona el repositorio**
+Estos pasos preparan la máquina virtual (VM) para el desarrollo.
+
+1.  **Clonar el Repositorio en la VM:**
+    * Conéctate a tu VM de desarrollo (`vm-debug-celesta`) usando el **SSH del Navegador** desde la consola de GCP.
+    * Dentro de la VM, instala Git y clona el repositorio usando un Personal Access Token (PAT) de GitHub:
+        ```bash
+        sudo apt-get update && sudo apt-get install -y git
+        git clone https://[TU_USUARIO]:[TU_PAT]@[github.com/GonzaloFrascheri/Celesta.git](https://github.com/GonzaloFrascheri/Celesta.git)
+        ```
+
+2.  **Configurar Variables de Entorno en la VM:**
+    * Dentro de la VM, navega a la carpeta del backend: `cd ~/Celesta/backend`.
+    * Crea el archivo de configuración de entorno: `nano .env`.
+    * Pega el siguiente contenido, reemplazando con tus datos. **`DB_HOST` debe ser la IP privada de tu instancia de Cloud SQL.**
+        ```env
+        DB_USER=postgres
+        DB_PASSWORD=tu_contraseña_super_secreta
+        DB_HOST=10.0.0.3
+        DB_PORT=5432
+        DB_DATABASE=postgres
+        ```
+    * Guarda y cierra (`Ctrl+O`, `Enter`, `Ctrl+X`).
+
+3.  **Instalar Docker y Levantar Servicios en la VM:**
+    * Dentro de la VM, instala Docker siguiendo la guía oficial (o nuestros pasos anteriores).
+    * Añade tu usuario al grupo de Docker: `sudo usermod -aG docker $USER` (requiere salir y volver a entrar por SSH).
+    * Desde la raíz del proyecto (`~/Celesta`), levanta los contenedores por primera vez:
+        ```bash
+        docker compose up --build
+        ```
+    * Deja esta terminal corriendo. Tus servicios ya están activos en la VM.
+
+### 3. Flujo de Trabajo de Desarrollo (Día a Día)
+
+Este es el ciclo que seguirás para cada cambio que hagas.
+
+1.  **Paso 1: Edita el código en tu MÁQUINA LOCAL**
+    * Usa tu VS Code local para modificar los archivos del proyecto en tu computadora.
+
+2.  **Paso 2: Sincroniza los cambios con la VM**
+    * Abre una terminal en **tu computadora local**.
+    * Navega a la carpeta que contiene tu proyecto.
+    * Ejecuta el siguiente comando `scp` para subir tus cambios a la VM. Reemplaza `us-central1-b` por la zona correcta si es diferente.
+        ```bash
+        gcloud compute scp --recurse ./Celesta vm-debug-celesta:~ --zone=us-central1-b
+        ```
+
+3.  **Paso 3: Observa la Magia**
+    * Gracias a los volúmenes y a `nodemon` que configuramos, `docker compose` en la VM detectará los archivos actualizados y **reiniciará el servicio del backend automáticamente**. No necesitas hacer nada más en la VM.
+
+4.  **Paso 4: Prueba tus Cambios**
+    * Usa Postman para probar tu API, apuntando a la **IP pública de la VM**, en el puerto `3001` para el backend o `3000` para el frontend.
+        * **Backend (API)**: `http://[IP-EXTERNA-DE-LA-VM]:3001`
+        * **Frontend (Next.js)**: `http://[IP-EXTERNA-DE-LA-VM]:3000`
+
+### 4. Despliegue a Producción
+
+* Cuando tus cambios estén probados y listos, simplemente haz un `push` a la rama `main` desde tu máquina local:
     ```bash
-    git clone [URL-DE-TU-REPOSITORIO-EN-GITHU]
+    git add .
+    git commit -m "Mi nueva funcionalidad"
+    git push origin main
     ```
-
-2.  **Navega a la carpeta del proyecto**
-    ```bash
-    cd Celesta :: SitioWeb
-    ```
-
-3.  **Construye y levanta los contenedores**
-    Este comando leerá el archivo `docker-compose.yml`, construirá las imágenes de ambos servicios y los iniciará.
-    ```bash
-    docker compose up --build
-    ```
-    > **Nota para usuarios de Linux**: Si encuentras un error de `permission denied`, puede que necesites ejecutar el comando con `sudo` (`sudo docker compose up --build`) o [configurar Docker para ejecutarse sin sudo](https://docs.docker.com/engine/install/linux-postinstall/).
-
-## Servicios Disponibles
-
-Una vez que los contenedores estén en funcionamiento, los servicios estarán disponibles en los siguientes puertos:
-
-* **Frontend (Next.js)**: [http://localhost:3000](http://localhost:3000)
-* **Backend (API)**: [http://localhost:3001](http://localhost:3001)
-
-## Uso y Comandos Útiles de Docker Compose
-
-* **Levantar los servicios en segundo plano (detached mode):**
-    ```bash
-    docker compose up -d --build
-    ```
-* **Ver el estado de los contenedores:**
-    ```bash
-    docker compose ps
-    ```
-* **Ver los logs de los servicios:**
-    ```bash
-    docker compose logs -f
-    ```
-* **Detener y eliminar los contenedores:**
-    ```bash
-    docker compose down
-    ```
-
-prueba
+* Esto activará los disparadores de **Cloud Build**, que desplegarán la nueva versión automáticamente en **Cloud Run**.
