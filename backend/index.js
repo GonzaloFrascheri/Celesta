@@ -199,6 +199,96 @@ app.delete('/api/clientes/:id', async (req, res) => {
   }
 });
 
+/** CATEGORIAS */
+
+// CREATE - Crear una nueva Categoría
+app.post('/api/categorias', async (req, res) => {
+  const { nombre_categoria } = req.body;
+  if (!nombre_categoria) {
+    return res.status(400).json({ error: 'El campo nombre_categoria es requerido' });
+  }
+  try {
+    const newId = uuidv4();
+    const query = 'INSERT INTO Categoria(id, nombre_categoria) VALUES($1, $2) RETURNING *';
+    const values = [newId, nombre_categoria];
+    const result = await pool.query(query, values);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    // Manejo de error específico para nombre de categoría duplicado (código de error 23505 en PostgreSQL)
+    if (error.code === '23505') { 
+        return res.status(409).json({ error: `La categoría '${nombre_categoria}' ya existe.` });
+    }
+    console.error('Error al insertar categoría:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// READ - Obtener todas las Categorías
+app.get('/api/categorias', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM Categoria ORDER BY nombre_categoria ASC');
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener categorías:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// READ - Obtener una Categoría por su ID
+app.get('/api/categorias/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM Categoria WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Categoría no encontrada' });
+    }
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error(`Error al obtener categoría ${id}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// UPDATE - Actualizar una Categoría por su ID
+app.put('/api/categorias/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nombre_categoria } = req.body;
+  if (!nombre_categoria) {
+    return res.status(400).json({ error: 'El campo nombre_categoria es requerido' });
+  }
+  try {
+    const query = 'UPDATE Categoria SET nombre_categoria = $1 WHERE id = $2 RETURNING *';
+    const values = [nombre_categoria, id];
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Categoría no encontrada para actualizar' });
+    }
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    // Manejo de error para duplicados también en la actualización
+    if (error.code === '23505') {
+        return res.status(409).json({ error: `La categoría '${nombre_categoria}' ya existe.` });
+    }
+    console.error(`Error al actualizar categoría ${id}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// DELETE - Eliminar una Categoría por su ID
+app.delete('/api/categorias/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM Categoria WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Categoría no encontrada para eliminar' });
+    }
+    res.status(200).json({ message: 'Categoría eliminada con éxito', categoria: result.rows[0] });
+  } catch (error) {
+    console.error(`Error al eliminar categoría ${id}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 
 /** BigQuery */
 /** COMPRAS */
@@ -550,6 +640,7 @@ app.get('/api/productos-maestros/:id', async (req, res) => {
   }
 });
 
+/** CATEGORIAS */
 
 // --- FIN DE RUTAS DE LA API ---
 
