@@ -1,0 +1,38 @@
+/* frontend/components/Sidebar.module.css */
+.sidebar {
+  width: 250px;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: #1a202c; /* Un fondo oscuro para el sidebar */
+  color: white;
+  padding-top: 80px; /* Espacio para el navbar */
+}
+
+.logo {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+  border-bottom: 1px solid #2d3748;
+}
+
+.navList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.navLink {
+  display: block;
+  padding: 1rem 1.5rem;
+  color: #a0aec0;
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.navLink:hover {
+  background-color: #2d3748;
+  color: white;
+}

@@ -1,0 +1,54 @@
+/* frontend/components/Auth.module.css */
+
+.authContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  background-color: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  margin: auto; /* Esto ayuda a centrarlo si el flexbox del layout no lo hace */
+}
+
+.title {
+  font-size: 1.5rem;
+  color: #1c1e21;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: #606770;
+  margin-top: 0;
+  margin-bottom: 2rem;
+}
+
+.googleButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: 'Roboto', sans-serif;
+  cursor: pointer;
+  background-color: white;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.googleButton:hover {
+  background-color: #f5f5f5;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.googleIcon {
+  width: 20px;
+  height: 20px;
+}

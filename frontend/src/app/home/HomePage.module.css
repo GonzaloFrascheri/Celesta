@@ -1,0 +1,56 @@
+/* frontend/app/home/HomePage.module.css */
+
+.welcomeCard {
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.mainTitle {
+  font-size: 2rem;
+  color: #1c1e21;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: #555;
+  margin-top: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.divider {
+  margin: 2rem 0;
+  border: none;
+  border-top: 1px solid #eaeaea;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+}
+
+.featureIcon {
+  font-size: 1.5rem;
+  color: #3b82f6; /* Un color azul para los íconos */
+}
+
+.ctaBox {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: #eef2ff;
+    border-left: 4px solid #4f46e5;
+    color: #3730a3;
+}
