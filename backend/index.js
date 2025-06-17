@@ -4,7 +4,9 @@ const { Pool } = require('pg');
 const { BigQuery } = require('@google-cloud/bigquery');
 const { v4: uuidv4 } = require('uuid');
 
+const cors = require('cors');
 const app = express();
+app.use(cors());
 app.use(express.json()); // Middleware para poder leer JSON en el body
 
 const PORT = process.env.PORT || 3001;
