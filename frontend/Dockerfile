@@ -26,6 +26,18 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY . .
+
+# --- AÑADIR ESTAS LÍNEAS PARA DEPURACIÓN TEMPORAL ---
+# Esto imprimirá el valor de la variable si existe. "|| true" evita que falle el build si no la encuentra.
+RUN printenv | grep NEXT_PUBLIC_FIREBASE_API_KEY || true
+RUN printenv | grep NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || true
+RUN printenv | grep NEXT_PUBLIC_FIREBASE_PROJECT_ID || true
+RUN printenv | grep NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || true
+RUN printenv | grep NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || true
+RUN printenv | grep NEXT_PUBLIC_FIREBASE_APP_ID || true
+RUN printenv | grep NEXT_PUBLIC_API_URL || true
+# --- FIN DE LÍNEAS DEPURACIÓN ---
+    
 # Ahora, cuando se ejecute, tendrá acceso a las variables de entorno
 RUN npm run build
 
