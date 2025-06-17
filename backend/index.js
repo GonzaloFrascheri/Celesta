@@ -131,15 +131,17 @@ app.post('/api/compras', async (req, res) => {
 
   try {
     const datasetId = 'celesta_data';
-    const compraId = uuidv4(); // Generamos un único ID para la compra
+    const compraId = uuidv4();
 
-    // 3. Cálculos en el Backend
-    // Calculamos el monto total sumando los subtotales de cada línea de detalle
     const monto_total = detalles.reduce((total, item) => {
       const cantidad = parseFloat(item.cantidad) || 0;
       const precio = parseFloat(item.precio_neto_unitario) || 0;
       return total + (cantidad * precio);
     }, 0);
+
+    // Formateamos la fecha al formato que BigQuery DATETIME espera: 'YYYY-MM-DD HH:MM:SS'
+    const now = new Date();
+    const formattedDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
 
     // 4. Preparación de los Datos para BigQuery
     // A. Preparamos el registro para la tabla 'Compras'
