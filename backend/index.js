@@ -152,7 +152,7 @@ app.post('/api/compras', async (req, res) => {
       fecha_emision: fecha_emision || null,
       centro_de_costos: centro_de_costos || null,
       monto_total: monto_total,
-      created_at: new Date() // Usamos la fecha del servidor para la respuesta inmediata
+      created_at: formattedDateTime // <-- Usar la variable que ya formateamos
     };
 
     // B. Preparamos los registros para la tabla 'Detalles_Compras'
