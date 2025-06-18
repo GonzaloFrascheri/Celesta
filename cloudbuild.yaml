@@ -1,17 +1,16 @@
-# cloudbuild.yaml (en la raíz del proyecto)
+# cloudbuild.yaml (CORREGIDO)
 
 steps:
-  # 1. Construir y Subir la imagen de Docker para el FRONTEND
-  - id: 'build-and-push-frontend' # ID único para este paso
+  # 1. Construir y Subir la imagen de Docker para el FRONTEND (sin cambios aquí)
+  - id: 'build-and-push-frontend'
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA' # Dominio AR
-      - '-f' # Especifica la ruta del Dockerfile para el frontend
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
+      - '-f'
       - 'frontend/Dockerfile'
-      - './frontend' # Especifica el contexto de la compilación (el directorio frontend)
-      # Argumentos de construcción para variables de entorno de Firebase
+      - './frontend'
       - '--build-arg'
       - 'NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}'
       - '--build-arg'
@@ -27,52 +26,53 @@ steps:
       - '--build-arg'
       - 'NEXT_PUBLIC_API_URL=${_NEXT_PUBLIC_API_URL}'
 
-  # 2. Desplegar la imagen del FRONTEND en Cloud Run
-  - id: 'deploy-frontend' # ID único para este paso
+  # 2. Desplegar la imagen del FRONTEND en Cloud Run (CORREGIDO)
+  - id: 'deploy-frontend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
-      - 'celesta-frontend' # Nombre de tu servicio en Cloud Run
-      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA' # Dominio AR
-      - '--region=us-central1' # Reemplaza con la región de tu Cloud Run
+      - 'celesta-frontend'
+      - '--image'  # <-- Argumento separado
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA' # <-- Valor separado
+      - '--region=us-central1'
       - '--platform=managed'
       - '--allow-unauthenticated'
-    waitFor: ['build-and-push-frontend'] # Este paso espera a que el frontend se construya y suba
+    waitFor: ['build-and-push-frontend']
 
-  # 3. Construir y Subir la imagen de Docker para el BACKEND
-  - id: 'build-and-push-backend' # ID único para este paso
+  # 3. Construir y Subir la imagen de Docker para el BACKEND (sin cambios aquí)
+  - id: 'build-and-push-backend'
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA' # Dominio AR
-      - '-f' # Especifica la ruta del Dockerfile para el backend
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
+      - '-f'
       - 'backend/Dockerfile'
-      - './backend' # Especifica el contexto de la compilación (el directorio backend)
-    # No necesita build-args para variables de Firebase si no las usa en el build
-    waitFor: ['-'] # Este paso puede iniciar tan pronto como los pasos anteriores lo permitan (no depende directamente de ellos)
+      - './backend'
+    waitFor: ['-'] # Esto permite que la construcción del backend se ejecute en paralelo a la del frontend
 
-  # 4. Desplegar la nueva imagen del BACKEND en Cloud Run
-  - id: 'deploy-backend' # ID único para este paso
+  # 4. Desplegar la nueva imagen del BACKEND en Cloud Run (CORREGIDO)
+  - id: 'deploy-backend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
-      - 'celesta-backend' # Nombre de tu servicio en Cloud Run
-      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA' # Dominio AR
-      - '--region=us-central1' # Reemplaza con la región de tu Cloud Run
+      - 'celesta-backend'
+      - '--image' # <-- Argumento separado
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA' # <-- Valor separado
+      - '--region=us-central1'
       - '--platform=managed'
       - '--allow-unauthenticated'
-    waitFor: ['build-and-push-backend'] # Este paso espera a que el backend se construya y suba
+    waitFor: ['build-and-push-backend']
 
 # La lista de imágenes que se almacenarán en Artifact Registry
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
 
-# Opciones globales para la compilación (aquí va el logging)
+# Opciones globales para la compilación
 options:
   logging: CLOUD_LOGGING_ONLY
