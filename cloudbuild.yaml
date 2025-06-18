@@ -41,6 +41,12 @@ steps:
 images:
   - 'gcr.io/$PROJECT_ID/celesta-frontend:$COMMIT_SHA'
 
+# --- MOVER LA SECCIÓN 'options' A ESTE LUGAR Y CAMBIARLA ASÍ ---
 options:
+  # 'logging' dentro de 'options' sigue siendo válido para forzar el tipo de log
   logging: GCS_ONLY
-  logsBucket: 'gs://celesta-poc-cloudbuild-logs'
+# --- FIN DE LA SECCIÓN 'options' ---
+
+# --- AÑADIR 'logsBucket' A NIVEL RAÍZ ---
+logsBucket: 'gs://celesta-poc-cloudbuild-logs' # <-- ¡IMPORTANTE! REEMPLAZA CON EL NOMBRE REAL DE TU BUCKET
+# --- FIN DE AÑADIDO ---
