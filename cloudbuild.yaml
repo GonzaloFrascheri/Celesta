@@ -1,4 +1,4 @@
-# cloudbuild.yaml (VERSIÓN FINAL Y ROBUSTA)
+# cloudbuild.yaml (VERSIÓN CON SINTAXIS CORREGIDA)
 
 steps:
   # ------------------- FRONTEND PIPELINE -------------------
@@ -9,7 +9,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/celesta-frontend:${SHORT_SHA}'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA' # <-- SINTAXIS CORREGIDA
       - '--build-arg'
       - 'NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}'
       - '--build-arg'
@@ -31,8 +31,8 @@ steps:
   # PASO 2: Subir (Push) la imagen del Frontend a Artifact Registry
   - id: 'push-frontend'
     name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/${PROJECT_ID}/celesta-frontend:${SHORT_SHA}']
-    waitFor: ['build-frontend'] # <-- Espera a que la imagen se construya
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'] # <-- SINTAXIS CORREGIDA
+    waitFor: ['build-frontend']
 
   # PASO 3: Desplegar el Frontend en Cloud Run
   - id: 'deploy-frontend'
@@ -43,33 +43,33 @@ steps:
       - 'deploy'
       - 'celesta-frontend'
       - '--image'
-      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/celesta-frontend:${SHORT_SHA}'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA' # <-- SINTAXIS CORREGIDA
       - '--region'
       - 'us-central1'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-    waitFor: ['push-frontend'] # <-- Espera a que la imagen se suba
+    waitFor: ['push-frontend']
 
   # ------------------- BACKEND PIPELINE -------------------
 
-  # PASO 4: Construir la imagen del Backend (puede correr en paralelo al build del frontend)
+  # PASO 4: Construir la imagen del Backend
   - id: 'build-backend'
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/celesta-backend:${SHORT_SHA}'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA' # <-- SINTAXIS CORREGIDA
       - '-f'
       - 'backend/Dockerfile'
       - './backend'
-    waitFor: ['-'] # No espera a los pasos del frontend, puede iniciar en paralelo
+    waitFor: ['-']
 
   # PASO 5: Subir (Push) la imagen del Backend a Artifact Registry
   - id: 'push-backend'
     name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/${PROJECT_ID}/celesta-backend:${SHORT_SHA}']
-    waitFor: ['build-backend'] # <-- Espera a que la imagen se construya
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'] # <-- SINTAXIS CORREGIDA
+    waitFor: ['build-backend']
 
   # PASO 6: Desplegar el Backend en Cloud Run
   - id: 'deploy-backend'
@@ -80,13 +80,13 @@ steps:
       - 'deploy'
       - 'celesta-backend'
       - '--image'
-      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/celesta-backend:${SHORT_SHA}'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA' # <-- SINTAXIS CORREGIDA
       - '--region'
       - 'us-central1'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-    waitFor: ['push-backend'] # <-- Espera a que la imagen se suba
+    waitFor: ['push-backend']
 
 options:
   logging: CLOUD_LOGGING_ONLY
