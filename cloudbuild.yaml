@@ -73,10 +73,6 @@ images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
 
-# --- ELIMINA LA SECCIÓN 'options' POR COMPLETO ---
-# options:
-#   logging: CLOUD_LOGGING_ONLY
-# --- FIN DE LA SECCIÓN A ELIMINAR ---
-
-# Bucket de logs para la cuenta de servicio personalizada
-logsBucket: 'gs://celesta-poc-cloudbuild-logs'
+# Opciones globales para la compilación (aquí va el logging)
+options:
+  logging: CLOUD_LOGGING_ONLY
