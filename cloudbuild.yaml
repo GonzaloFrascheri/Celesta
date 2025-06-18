@@ -40,3 +40,7 @@ steps:
 
 images:
   - 'gcr.io/$PROJECT_ID/celesta-frontend:$COMMIT_SHA'
+
+options:
+  logging: GCS_ONLY
+  logsBucket: 'gs://celesta-poc-cloudbuild-logs'
