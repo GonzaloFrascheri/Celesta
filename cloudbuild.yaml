@@ -65,6 +65,21 @@ steps:
       - './backend'
     waitFor: ['-']
 
+  # PASO DE DEPURACIÓN AÑADIDO
+  - id: 'debug-backend-push'
+    name: 'ubuntu' # Una imagen simple con herramientas de shell
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "================= DEBUGGING PUSH STEP ================="
+        echo "PROJECT_ID a utilizar es: [$PROJECT_ID]"
+        echo "SHORT_SHA a utilizar es: [$SHORT_SHA]"
+        echo "Comando PUSH que se ejecutará a continuación:"
+        echo "docker push us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA"
+        echo "======================================================="
+    waitFor: ['build-backend']
+
   # PASO 5: Subir (Push) la imagen del Backend a Artifact Registry
   - id: 'push-backend'
     name: 'gcr.io/cloud-builders/docker'
