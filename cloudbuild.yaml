@@ -26,7 +26,7 @@ steps:
       - '--build-arg'
       - 'NEXT_PUBLIC_API_URL=${_NEXT_PUBLIC_API_URL}'
 
-  # 2. Desplegar la imagen del FRONTEND en Cloud Run (CORREGIDO)
+  # 2. Desplegar la imagen del FRONTEND en Cloud Run (VERSIÓN FINAL)
   - id: 'deploy-frontend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -34,10 +34,12 @@ steps:
       - 'run'
       - 'deploy'
       - 'celesta-frontend'
-      - '--image'  # <-- Argumento separado
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA' # <-- Valor separado
-      - '--region=us-central1'
-      - '--platform=managed'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
+      - '--region' # <-- Corregido
+      - 'us-central1' # <-- Corregido
+      - '--platform' # <-- Corregido
+      - 'managed' # <-- Corregido
       - '--allow-unauthenticated'
     waitFor: ['build-and-push-frontend']
 
@@ -53,7 +55,7 @@ steps:
       - './backend'
     waitFor: ['-'] # Esto permite que la construcción del backend se ejecute en paralelo a la del frontend
 
-  # 4. Desplegar la nueva imagen del BACKEND en Cloud Run (CORREGIDO)
+  # 4. Desplegar la nueva imagen del BACKEND en Cloud Run (VERSIÓN FINAL)
   - id: 'deploy-backend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -61,10 +63,12 @@ steps:
       - 'run'
       - 'deploy'
       - 'celesta-backend'
-      - '--image' # <-- Argumento separado
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA' # <-- Valor separado
-      - '--region=us-central1'
-      - '--platform=managed'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
+      - '--region' # <-- Corregido
+      - 'us-central1' # <-- Corregido
+      - '--platform' # <-- Corregido
+      - 'managed' # <-- Corregido
       - '--allow-unauthenticated'
     waitFor: ['build-and-push-backend']
 
