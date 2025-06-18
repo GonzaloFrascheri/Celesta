@@ -1,15 +1,13 @@
-# cloudbuild.yaml (VERSIÓN CON SINTAXIS CORREGIDA)
+# cloudbuild.yaml (con autenticación manual)
 
 steps:
   # ------------------- FRONTEND PIPELINE -------------------
-
-  # PASO 1: Construir la imagen del Frontend
   - id: 'build-frontend'
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA' # <-- SINTAXIS CORREGIDA
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
       - '--build-arg'
       - 'NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}'
       - '--build-arg'
@@ -28,13 +26,20 @@ steps:
       - 'frontend/Dockerfile'
       - './frontend'
 
-  # PASO 2: Subir (Push) la imagen del Frontend a Artifact Registry
-  - id: 'push-frontend'
-    name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'] # <-- SINTAXIS CORREGIDA
+  # PASO NUEVO: Iniciar sesión en Artifact Registry para el Frontend
+  - id: 'login-ar-frontend'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - 'gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev'
     waitFor: ['build-frontend']
 
-  # PASO 3: Desplegar el Frontend en Cloud Run
+  - id: 'push-frontend'
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA']
+    waitFor: ['login-ar-frontend']
+
   - id: 'deploy-frontend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -43,7 +48,7 @@ steps:
       - 'deploy'
       - 'celesta-frontend'
       - '--image'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA' # <-- SINTAXIS CORREGIDA
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
       - '--region'
       - 'us-central1'
       - '--platform'
@@ -52,26 +57,31 @@ steps:
     waitFor: ['push-frontend']
 
   # ------------------- BACKEND PIPELINE -------------------
-
-  # PASO 4: Construir la imagen del Backend
   - id: 'build-backend'
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA' # <-- SINTAXIS CORREGIDA
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
       - '-f'
       - 'backend/Dockerfile'
       - './backend'
     waitFor: ['-']
 
-  # PASO 5: Subir (Push) la imagen del Backend a Artifact Registry
-  - id: 'push-backend'
-    name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'] # <-- SINTAXIS CORREGIDA
+  # PASO NUEVO: Iniciar sesión en Artifact Registry para el Backend
+  - id: 'login-ar-backend'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - 'gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev'
     waitFor: ['build-backend']
 
-  # PASO 6: Desplegar el Backend en Cloud Run
+  - id: 'push-backend'
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA']
+    waitFor: ['login-ar-backend']
+
   - id: 'deploy-backend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -80,7 +90,7 @@ steps:
       - 'deploy'
       - 'celesta-backend'
       - '--image'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA' # <-- SINTAXIS CORREGIDA
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
       - '--region'
       - 'us-central1'
       - '--platform'
