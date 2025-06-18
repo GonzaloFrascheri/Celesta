@@ -1,32 +1,27 @@
-# cloudbuild.yaml (CORREGIDO)
+# cloudbuild.yaml (VERSIÓN DEFINITIVA)
 
 steps:
-  # 1. Construir y Subir la imagen de Docker para el FRONTEND (sin cambios aquí)
+  # 1. Construir y SUBIR explícitamente la imagen del FRONTEND
   - id: 'build-and-push-frontend'
     name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash' # <-- CAMBIO: Usamos bash para múltiples comandos
     args:
-      - 'build'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
-      - '-f'
-      - 'frontend/Dockerfile'
-      - './frontend'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_APP_ID=${_NEXT_PUBLIC_FIREBASE_APP_ID}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_API_URL=${_NEXT_PUBLIC_API_URL}'
+      - '-c'
+      - |
+        docker build \
+          -t us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA \
+          --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY} \
+          --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN} \
+          --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID} \
+          --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET} \
+          --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID} \
+          --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=${_NEXT_PUBLIC_FIREBASE_APP_ID} \
+          --build-arg NEXT_PUBLIC_API_URL=${_NEXT_PUBLIC_API_URL} \
+          -f frontend/Dockerfile \
+          ./frontend \
+        && docker push us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA # <-- CAMBIO CLAVE: Push explícito
 
-  # 2. Desplegar la imagen del FRONTEND en Cloud Run (VERSIÓN FINAL)
+  # 2. Desplegar la imagen del FRONTEND en Cloud Run (espera al paso anterior)
   - id: 'deploy-frontend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -36,26 +31,28 @@ steps:
       - 'celesta-frontend'
       - '--image'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
-      - '--region' # <-- Corregido
-      - 'us-central1' # <-- Corregido
-      - '--platform' # <-- Corregido
-      - 'managed' # <-- Corregido
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
       - '--allow-unauthenticated'
     waitFor: ['build-and-push-frontend']
 
-  # 3. Construir y Subir la imagen de Docker para el BACKEND (sin cambios aquí)
+  # 3. Construir y SUBIR explícitamente la imagen del BACKEND
   - id: 'build-and-push-backend'
     name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash' # <-- CAMBIO: Usamos bash para múltiples comandos
     args:
-      - 'build'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
-      - '-f'
-      - 'backend/Dockerfile'
-      - './backend'
-    waitFor: ['-'] # Esto permite que la construcción del backend se ejecute en paralelo a la del frontend
+      - '-c'
+      - |
+        docker build \
+          -t us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA \
+          -f backend/Dockerfile \
+          ./backend \
+        && docker push us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA # <-- CAMBIO CLAVE: Push explícito
+    waitFor: ['-'] # Puede correr en paralelo con el build del frontend
 
-  # 4. Desplegar la nueva imagen del BACKEND en Cloud Run (VERSIÓN FINAL)
+  # 4. Desplegar la nueva imagen del BACKEND en Cloud Run (espera al paso anterior)
   - id: 'deploy-backend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -65,18 +62,17 @@ steps:
       - 'celesta-backend'
       - '--image'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
-      - '--region' # <-- Corregido
-      - 'us-central1' # <-- Corregido
-      - '--platform' # <-- Corregido
-      - 'managed' # <-- Corregido
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
       - '--allow-unauthenticated'
     waitFor: ['build-and-push-backend']
 
-# La lista de imágenes que se almacenarán en Artifact Registry
-images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
+# La lista de imágenes ya no es necesaria aquí porque hacemos el push explícitamente.
+# images:
+#  - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
+#  - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
 
-# Opciones globales para la compilación
 options:
   logging: CLOUD_LOGGING_ONLY
