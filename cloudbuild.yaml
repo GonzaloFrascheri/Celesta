@@ -1,11 +1,17 @@
+# cloudbuild.yaml (en la raíz del proyecto)
+
 steps:
-  # 1. Construir la imagen de Docker para el frontend
-  - name: 'gcr.io/cloud-builders/docker'
+  # 1. Construir y Subir la imagen de Docker para el FRONTEND
+  - id: 'build-and-push-frontend' # ID único para este paso
+    name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/celesta-frontend:$COMMIT_SHA'
-      # Pasamos cada variable de sustitución como un argumento de construcción
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA' # Dominio AR
+      - '-f' # Especifica la ruta del Dockerfile para el frontend
+      - 'frontend/Dockerfile'
+      - './frontend' # Especifica el contexto de la compilación (el directorio frontend)
+      # Argumentos de construcción para variables de entorno de Firebase
       - '--build-arg'
       - 'NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}'
       - '--build-arg'
@@ -20,28 +26,56 @@ steps:
       - 'NEXT_PUBLIC_FIREBASE_APP_ID=${_NEXT_PUBLIC_FIREBASE_APP_ID}'
       - '--build-arg'
       - 'NEXT_PUBLIC_API_URL=${_NEXT_PUBLIC_API_URL}'
-      - './frontend' # Le decimos que construya usando el Dockerfile de la carpeta frontend
 
-  # 2. Subir la imagen a Google Artifact Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/celesta-frontend:$COMMIT_SHA']
-
-  # 3. Desplegar la nueva imagen en Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  # 2. Desplegar la imagen del FRONTEND en Cloud Run
+  - id: 'deploy-frontend' # ID único para este paso
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
       - 'celesta-frontend' # Nombre de tu servicio en Cloud Run
-      - '--image=gcr.io/$PROJECT_ID/celesta-frontend:$COMMIT_SHA'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA' # Dominio AR
       - '--region=us-central1' # Reemplaza con la región de tu Cloud Run
       - '--platform=managed'
       - '--allow-unauthenticated'
+    waitFor: ['build-and-push-frontend'] # Este paso espera a que el frontend se construya y suba
 
+  # 3. Construir y Subir la imagen de Docker para el BACKEND
+  - id: 'build-and-push-backend' # ID único para este paso
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA' # Dominio AR
+      - '-f' # Especifica la ruta del Dockerfile para el backend
+      - 'backend/Dockerfile'
+      - './backend' # Especifica el contexto de la compilación (el directorio backend)
+    # No necesita build-args para variables de Firebase si no las usa en el build
+    waitFor: ['-'] # Este paso puede iniciar tan pronto como los pasos anteriores lo permitan (no depende directamente de ellos)
+
+  # 4. Desplegar la nueva imagen del BACKEND en Cloud Run
+  - id: 'deploy-backend' # ID único para este paso
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'celesta-backend' # Nombre de tu servicio en Cloud Run
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA' # Dominio AR
+      - '--region=us-central1' # Reemplaza con la región de tu Cloud Run
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+    waitFor: ['build-and-push-backend'] # Este paso espera a que el backend se construya y suba
+
+# La lista de imágenes que se almacenarán en Artifact Registry
 images:
-  - 'gcr.io/$PROJECT_ID/celesta-frontend:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
 
-# --- AÑADIR ESTE BLOQUE AL FINAL DEL ARCHIVO ---
+# Opciones globales para la compilación (aquí va el logging)
 options:
   logging: CLOUD_LOGGING_ONLY
-# --- FIN DEL BLOQUE AÑADIDO ---
+
+# Bucket de logs para la cuenta de servicio personalizada
+logsBucket: 'gs://celesta-poc-cloudbuild-logs'
