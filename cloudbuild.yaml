@@ -7,7 +7,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend/frontend:$SHORT_SHA'
       - '--build-arg'
       - 'NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}'
       - '--build-arg'
@@ -37,8 +37,9 @@ steps:
 
   - id: 'push-frontend'
     name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA']
-    waitFor: ['login-ar-frontend']
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend/frontend:$SHORT_SHA'
 
   - id: 'deploy-frontend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -48,25 +49,32 @@ steps:
       - 'deploy'
       - 'celesta-frontend'
       - '--image'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend:$SHORT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend/frontend:$SHORT_SHA'
       - '--region'
       - 'us-central1'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-    waitFor: ['push-frontend']
+      - '--set-env-vars'
+      - |
+        NEXT_PUBLIC_API_URL=$_NEXT_PUBLIC_API_URL,
+        NEXT_PUBLIC_FIREBASE_API_KEY=$_NEXT_PUBLIC_FIREBASE_API_KEY,
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID=$_NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        NEXT_PUBLIC_FIREBASE_APP_ID=$_NEXT_PUBLIC_FIREBASE_APP_ID
 
   # ------------------- BACKEND PIPELINE -------------------
   - id: 'build-backend'
     name: 'gcr.io/cloud-builders/docker'
     args:
-      - 'build'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
-      - '-f'
-      - 'backend/Dockerfile'
-      - './backend'
-    waitFor: ['-']
+    - 'build'
+    - '-t'
+    - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
+    - '-f'
+    - 'backend/Dockerfile'
+    - './backend'
 
   # PASO NUEVO: Iniciar sesión en Artifact Registry para el Backend
   - id: 'login-ar-backend'
@@ -79,8 +87,9 @@ steps:
 
   - id: 'push-backend'
     name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA']
-    waitFor: ['login-ar-backend']
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
 
   - id: 'deploy-backend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
