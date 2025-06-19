@@ -1,8 +1,13 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirebaseAuth } from '../../frontend/lib/firebase';
+import {
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut
+} from 'firebase/auth';
+import { getFirebaseAuth } from '../api/firebase';   // ← Ruta corregida
 import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext({
@@ -13,9 +18,9 @@ const AuthContext = createContext({
 });
 
 export function AuthProvider({ children }) {
-  const [user, setUser]     = useState(null);
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const router                = useRouter();
 
   useEffect(() => {
     const auth = getFirebaseAuth();
