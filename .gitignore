@@ -1,1 +1,34 @@
+# Archivo .gitignore Unificado y Corregido
+
+# Dependencias
+node_modules
+/frontend/node_modules
+/backend/node_modules
+.pnp
+.pnp.*
+
+# Archivos de entorno - NUNCA SUBIR A GIT
 .env
+.env.*
+!.env.example
+
+# Next.js
+.next/
+/frontend/.next/
+out/
+
+# Archivos de build y logs
+build/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Varios
+.DS_Store
+*.pem
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
