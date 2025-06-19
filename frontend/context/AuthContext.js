@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirebaseAuth } from '../../api/firebase'; // ← ajusta si tu firebase.js está en otra carpeta
+import { getFirebaseAuth } from '../../frontend/lib/firebase';
 import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext({
