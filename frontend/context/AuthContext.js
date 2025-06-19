@@ -7,7 +7,7 @@ import {
   signInWithPopup,
   signOut
 } from 'firebase/auth';
-import { getFirebaseAuth } from '../api/firebase';   // ← Ruta corregida
+import { getFirebaseAuth } from '../lib/firebase';
 import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext({
