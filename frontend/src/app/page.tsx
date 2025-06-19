@@ -1,30 +1,43 @@
-"use client";
+// frontend/src/app/page.tsx
+
+// 1) Si quieres desactivar SSG de esta ruta (y evitar la prerender de /_not-found)
+// export const dynamic = 'force-dynamic';
+
+'use client';
 
 import { useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext'; // La ruta al contexto es correcta
+import { FirebaseProvider } from './providers/FirebaseProvider';
+import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 
-export default function RootPage() {
+function RootPageContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // Cuando termine de cargar la información de autenticación...
     if (!loading) {
-      if (user) {
-        // Si hay un usuario, lo mandamos a /home
-        router.push('/home');
-      } else {
-        // Si no hay usuario, lo mandamos a /login
-        router.push('/login');
-      }
+      router.push(user ? '/home' : '/login');
     }
   }, [user, loading, router]);
 
-  // Mientras tanto, muestra un mensaje de carga
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    <div
+      style={{
+        display:        'flex',
+        justifyContent: 'center',
+        alignItems:     'center',
+        height:         '100vh',
+      }}
+    >
       <h1>Cargando...</h1>
     </div>
+  );
+}
+
+export default function RootPage() {
+  return (
+    <FirebaseProvider>
+      <RootPageContent />
+    </FirebaseProvider>
   );
 }
