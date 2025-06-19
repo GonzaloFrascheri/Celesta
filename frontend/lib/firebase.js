@@ -1,7 +1,8 @@
+// frontend/api/firebase.js
 'use client';
 
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey:              process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,12 +13,13 @@ const firebaseConfig = {
   appId:               process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app;
-if (typeof window !== 'undefined') {
-  // sólo en cliente
-  app = getApps().length
-    ? getApp()
-    : initializeApp(firebaseConfig);
+/**
+ * Sólo en cliente crea o recupera la app de Firebase
+ */
+export function getFirebaseAuth() {
+  if (typeof window === 'undefined') {
+    return null;  // No hay auth en server
+  }
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  return getAuth(app);
 }
-
-export const auth = getAuth(app);

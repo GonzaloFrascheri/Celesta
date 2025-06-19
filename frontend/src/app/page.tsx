@@ -1,16 +1,10 @@
-// frontend/src/app/page.tsx
-
-// 1) Si quieres desactivar SSG de esta ruta (y evitar la prerender de /_not-found)
-// export const dynamic = 'force-dynamic';
-
 'use client';
 
 import { useEffect } from 'react';
-import { FirebaseProvider } from './providers/FirebaseProvider';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth }   from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 
-function RootPageContent() {
+export default function RootPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -31,13 +25,5 @@ function RootPageContent() {
     >
       <h1>Cargando...</h1>
     </div>
-  );
-}
-
-export default function RootPage() {
-  return (
-    <FirebaseProvider>
-      <RootPageContent />
-    </FirebaseProvider>
   );
 }
