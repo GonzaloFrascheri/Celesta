@@ -1,7 +1,9 @@
 // frontend/lib/api.js
 
 import axios from 'axios';
-import { auth } from './firebase'; // Importamos la instancia de auth de Firebase
+import { getFirebaseAuth  } from './firebase'; // Importamos la instancia de auth de Firebase
+
+const auth = getFirebaseAuth();
 
 // Creamos una instancia de Axios con configuración base
 const apiClient = axios.create({

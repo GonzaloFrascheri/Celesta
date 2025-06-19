@@ -69,12 +69,14 @@ steps:
   - id: 'build-backend'
     name: 'gcr.io/cloud-builders/docker'
     args:
-    - 'build'
-    - '-t'
-    - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
-    - '-f'
-    - 'backend/Dockerfile'
-    - './backend'
+      - 'build'
+      - '-t'
+      # -> agregamos "/backend" como nombre de la imagen dentro del repo
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
+      - '-f'
+      - 'backend/Dockerfile'
+      - './backend'
+    waitFor: ['-']
 
   # PASO NUEVO: Iniciar sesión en Artifact Registry para el Backend
   - id: 'login-ar-backend'
@@ -82,14 +84,19 @@ steps:
     entrypoint: 'bash'
     args:
       - '-c'
-      - 'gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev'
+      - >
+        gcloud auth print-access-token \
+        | docker login -u oauth2accesstoken --password-stdin \
+          https://us-central1-docker.pkg.dev
     waitFor: ['build-backend']
 
   - id: 'push-backend'
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
+      # -> mismo tag que en build
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
+    waitFor: ['login-ar-backend']
 
   - id: 'deploy-backend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -99,7 +106,8 @@ steps:
       - 'deploy'
       - 'celesta-backend'
       - '--image'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend:$SHORT_SHA'
+      # -> de nuevo, la ruta completa
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
       - '--region'
       - 'us-central1'
       - '--platform'
