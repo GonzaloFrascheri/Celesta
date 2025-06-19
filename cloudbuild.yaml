@@ -1,46 +1,23 @@
 # cloudbuild.yaml (con autenticación manual)
 
 steps:
-  # ------------------- FRONTEND PIPELINE -------------------
-  - id: 'build-frontend'
-    name: 'gcr.io/cloud-builders/docker'
+  # 1) FRONTEND: build y push con Kaniko
+  - id: 'build-and-push-frontend'
+    name: 'gcr.io/kaniko-project/executor:latest'
     args:
-      - 'build'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend/frontend:$SHORT_SHA'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_FIREBASE_APP_ID=${_NEXT_PUBLIC_FIREBASE_APP_ID}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_API_URL=${_NEXT_PUBLIC_API_URL}'
-      - '-f'
-      - 'frontend/Dockerfile'
-      - './frontend'
+      - --context=dir://frontend
+      - --dockerfile=frontend/Dockerfile
+      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend/frontend:$SHORT_SHA
+      - --cache=true
+      - --build-arg=NEXT_PUBLIC_FIREBASE_API_KEY=$_NEXT_PUBLIC_FIREBASE_API_KEY
+      - --build-arg=NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+      - --build-arg=NEXT_PUBLIC_FIREBASE_PROJECT_ID=$_NEXT_PUBLIC_FIREBASE_PROJECT_ID
+      - --build-arg=NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+      - --build-arg=NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+      - --build-arg=NEXT_PUBLIC_FIREBASE_APP_ID=$_NEXT_PUBLIC_FIREBASE_APP_ID
+      - --build-arg=NEXT_PUBLIC_API_URL=$_NEXT_PUBLIC_API_URL
 
-  # PASO NUEVO: Iniciar sesión en Artifact Registry para el Frontend
-  - id: 'login-ar-frontend'
-    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - 'gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev'
-    waitFor: ['build-frontend']
-
-  - id: 'push-frontend'
-    name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend/frontend:$SHORT_SHA'
-
+  # 2) FRONTEND: deploy a Cloud Run (runtime env vars)
   - id: 'deploy-frontend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -65,39 +42,16 @@ steps:
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
         NEXT_PUBLIC_FIREBASE_APP_ID=$_NEXT_PUBLIC_FIREBASE_APP_ID
 
-  # ------------------- BACKEND PIPELINE -------------------
-  - id: 'build-backend'
-    name: 'gcr.io/cloud-builders/docker'
+  # 3) BACKEND: build y push con Kaniko
+  - id: 'build-and-push-backend'
+    name: 'gcr.io/kaniko-project/executor:latest'
     args:
-      - 'build'
-      - '-t'
-      # -> agregamos "/backend" como nombre de la imagen dentro del repo
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
-      - '-f'
-      - 'backend/Dockerfile'
-      - './backend'
-    waitFor: ['-']
+      - --context=dir://backend
+      - --dockerfile=backend/Dockerfile
+      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA
+      - --cache=true
 
-  # PASO NUEVO: Iniciar sesión en Artifact Registry para el Backend
-  - id: 'login-ar-backend'
-    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - >
-        gcloud auth print-access-token \
-        | docker login -u oauth2accesstoken --password-stdin \
-          https://us-central1-docker.pkg.dev
-    waitFor: ['build-backend']
-
-  - id: 'push-backend'
-    name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      # -> mismo tag que en build
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
-    waitFor: ['login-ar-backend']
-
+  # 4) BACKEND: deploy a Cloud Run
   - id: 'deploy-backend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -106,14 +60,12 @@ steps:
       - 'deploy'
       - 'celesta-backend'
       - '--image'
-      # -> de nuevo, la ruta completa
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
       - '--region'
       - 'us-central1'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-    waitFor: ['push-backend']
 
 options:
   logging: CLOUD_LOGGING_ONLY
