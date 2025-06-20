@@ -17,7 +17,7 @@ export default function Sidebar() {
         </li>
         <li>
           <Link href="/home/compras" className={styles.navLink}>
-            Nueva Compra
+            Compras
           </Link>
         </li>
         <li>

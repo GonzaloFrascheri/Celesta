@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link'; // <-- 1. Importa el componente Link
+import Link from 'next/link';
 import apiClient from '../../../../lib/api';
 import styles from './Compras.module.css';
 
