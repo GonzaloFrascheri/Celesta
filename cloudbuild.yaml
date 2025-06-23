@@ -8,7 +8,7 @@ steps:
       - --context=dir://frontend
       - --dockerfile=frontend/Dockerfile
       - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend/frontend:$SHORT_SHA
-      - --cache=false
+      - --cache=true
       - --build-arg=NEXT_PUBLIC_FIREBASE_API_KEY=$_NEXT_PUBLIC_FIREBASE_API_KEY
       - --build-arg=NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
       - --build-arg=NEXT_PUBLIC_FIREBASE_PROJECT_ID=$_NEXT_PUBLIC_FIREBASE_PROJECT_ID
