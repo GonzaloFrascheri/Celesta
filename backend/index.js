@@ -1,155 +1,103 @@
 require('dotenv').config();
-const express   = require('express');
-const cors      = require('cors');
-const admin     = require('firebase-admin');
+const express = require('express');
+const cors = require('cors');
+const admin = require('firebase-admin');
 const { BigQuery } = require('@google-cloud/bigquery');
 const { v4: uuidv4 } = require('uuid');
 
-console.log('ENV PORT                     =', process.env.PORT);
-console.log('ENV BIGQUERY_DATASET_ID (cut)=', (process.env.BIGQUERY_DATASET_ID||'').slice(0,10), '…');
-console.log('ENV FIREBASE_SERVICE_ACCOUNT length =', (process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64||'').length);
-
-// Inicialización de la APP
-const app = express();
-app.use(cors());
-app.use(express.json()); // ¡aquí Express.json sí que existe!
-
-const PORT = process.env.PORT || 3001;
-
-// 1. Firebase Admin SDK (Para Firestore)
-// Asegúrate de tener tus credenciales en una variable de entorno FIREBASE_SERVICE_ACCOUNT_KEY
-try {
-  const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
-  if (!base64) {
-    console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 not found');
-    process.exit(1);
-  }
-  const serviceAccount = JSON.parse(
-    Buffer.from(base64, 'base64').toString('utf-8')
-  );
-
-  initializeApp({
-    credential: _credential.cert(serviceAccount)
-  });
-  console.log('✅ Firebase Admin SDK inicializado correctamente.');
-} catch (error) {
-  console.error('❌ Error al inicializar Firebase Admin SDK. Asegúrate de que la variable de entorno FIREBASE_SERVICE_ACCOUNT_KEY esté configurada.', error);
-}
-
-const db = firestore();
-const bigquery = new BigQuery();
-
-// Leer el dataset de BigQuery desde la env var
-const DATASET_ID = process.env.BIGQUERY_DATASET_ID;
-if (!DATASET_ID) {
-  console.error('❌ BIGQUERY_DATASET_ID no está definido');
+// Inicialización de Firebase Admin con la clave en Base64
+const b64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
+if (!b64) {
+  console.error('❌ Falta FIREBASE_SERVICE_ACCOUNT_KEY_BASE64');
   process.exit(1);
 }
-console.log('🔍 BigQuery dataset configurado como:', DATASET_ID);
+const serviceAccount = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+const db = admin.firestore();
+const bigquery = new BigQuery();
 
-// --- HELPERS (Funciones de ayuda para un código más limpio) ---
-const sendSuccess = (res, data, statusCode = 200) => res.status(statusCode).json({ success: true, data });
-const sendError = (res, message, statusCode = 500) => {
-  console.error('❌ API Error:', message);
-  res.status(statusCode).json({ success: false, error: message });
-};
+// Dataset de BigQuery via env var
+const DATASET_ID = process.env.BIGQUERY_DATASET_ID;
+if (!DATASET_ID) {
+  console.error('❌ Falta BIGQUERY_DATASET_ID');
+  process.exit(1);
+}
 
-// --- INICIO DE RUTAS DE LA API ---
-/** Firestore */
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-/** CLIENTES */
-const clientesCollection = db.collection('clientes');
+// Helpers
+const sendSuccess = (res, data, code = 200) => res.status(code).json({ success: true, data });
+const sendError   = (res, msg, code = 500) => res.status(code).json({ success: false, error: msg });
 
-// CREATE - Crear un nuevo Cliente
+// --- RUTAS DE CLIENTES (ejemplo) ---
+const clientesCol = db.collection('clientes');
+
+// CREATE
 app.post('/api/clientes', async (req, res) => {
   try {
     const { nombre, rut, email, telefono } = req.body;
-    if (!nombre || !rut) {
-      return sendError(res, 'Los campos nombre y rut son requeridos', 400);
-    }
-    const nuevoCliente = {
+    if (!nombre || !rut) return sendError(res, 'nombre y rut son requeridos', 400);
+
+    const nuevo = {
       id: uuidv4(),
-      nombre,
-      rut,
-      email: email || null,
-      telefono: telefono || null,
+      nombre, rut,
+      email: email||null,
+      telefono: telefono||null,
       created_at: admin.firestore.FieldValue.serverTimestamp()
     };
-    await clientesCollection.doc(nuevoCliente.id).set(nuevoCliente);
-    console.log(`✅ Cliente '${nuevoCliente.nombre}' creado con ID: ${nuevoCliente.id}`);
-    return sendSuccess(res, nuevoCliente, 201);
-  } catch (error) {
-    console.error('❌ Error al crear cliente:', error);
-    return sendError(res, 'Error interno del servidor al crear el cliente');
+    await clientesCol.doc(nuevo.id).set(nuevo);
+    return sendSuccess(res, nuevo, 201);
+  } catch (e) {
+    console.error(e);
+    return sendError(res, 'Error interno al crear cliente');
   }
 });
 
-// READ ALL - Obtener todos los Clientes
+// READ ALL
 app.get('/api/clientes', async (req, res) => {
   try {
-    const snapshot = await clientesCollection.orderBy('nombre').get();
-    const clientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    return sendSuccess(res, clientes);
-  } catch (error) {
-    console.error('❌ Error al obtener clientes:', error);
-    return sendError(res, 'Error interno del servidor al obtener los clientes');
+    const snap = await clientesCol.orderBy('nombre').get();
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return sendSuccess(res, list);
+  } catch (e) {
+    console.error(e);
+    return sendError(res, 'Error interno al listar clientes');
   }
 });
 
-// READ ONE - Obtener un Cliente por su ID
-app.get('/api/clientes/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const doc = await clientesCollection.doc(id).get();
-    if (!doc.exists) {
-      return sendError(res, 'Cliente no encontrado', 404);
-    }
-    return sendSuccess(res, { id: doc.id, ...doc.data() });
-  } catch (error) {
-    console.error(`❌ Error al obtener cliente ${req.params.id}:`, error);
-    return sendError(res, 'Error interno del servidor al obtener el cliente');
-  }
-});
-
-// UPDATE - Actualizar un Cliente por su ID
+// UPDATE
 app.put('/api/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    // Clonamos el body y borramos id y created_at
-    const datosAActualizar = { ...req.body };
-    delete datosAActualizar.id;
-    delete datosAActualizar.created_at;
+    const data = { ...req.body };
+    delete data.id;
+    delete data.created_at;
+    if (Object.keys(data).length === 0) return sendError(res, 'Nada para actualizar', 400);
 
-    if (Object.keys(datosAActualizar).length === 0) {
-      return sendError(res, 'Se requiere al menos un campo para actualizar', 400);
-    }
-
-    await clientesCollection.doc(id).update(datosAActualizar);
-    const updatedDoc = await clientesCollection.doc(id).get();
-    console.log(`✅ Cliente ${id} actualizado en Firestore.`);
-    return sendSuccess(res, { id: updatedDoc.id, ...updatedDoc.data() });
-  } catch (error) {
-    console.error(`❌ Error al actualizar cliente ${req.params.id}:`, error);
-    return sendError(res, 'Error interno del servidor al actualizar el cliente');
+    await clientesCol.doc(id).update(data);
+    const upd = await clientesCol.doc(id).get();
+    return sendSuccess(res, { id: upd.id, ...upd.data() });
+  } catch (e) {
+    console.error(e);
+    return sendError(res, 'Error interno al actualizar cliente');
   }
 });
 
-// DELETE - Eliminar un Cliente por su ID
+// DELETE
 app.delete('/api/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const docRef = clientesCollection.doc(id);
-
-    if (!(await docRef.get()).exists) {
-      return sendError(res, 'Cliente no encontrado', 404);
-    }
-
-    await docRef.delete();
-    console.log(`✅ Cliente ${id} eliminado de Firestore.`);
+    const ref = clientesCol.doc(id);
+    if (!(await ref.get()).exists) return sendError(res, 'Cliente no existe', 404);
+    await ref.delete();
     return res.status(204).send();
-  } catch (error) {
-    console.error(`❌ Error al eliminar cliente ${req.params.id}:`, error);
-    return sendError(res, 'Error interno del servidor al eliminar el cliente');
+  } catch (e) {
+    console.error(e);
+    return sendError(res, 'Error interno al eliminar cliente');
   }
 });
 
@@ -804,6 +752,7 @@ app.get('/api/productos-maestros/:id', async (req, res) => {
 
 // --- FIN DE RUTAS DE LA API ---
 
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`Backend listening on port ${PORT}`);
+  console.log(`🛡️  Server escuchando en puerto ${PORT}`);
 });
