@@ -1,4 +1,4 @@
-# cloudbuild.yaml (con autenticación manual)
+# cloudbuild.yaml (Sintaxis Final Corregida)
 
 steps:
   # 1) FRONTEND: build y push con Kaniko
@@ -41,6 +41,7 @@ steps:
         NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
         NEXT_PUBLIC_FIREBASE_APP_ID=$_NEXT_PUBLIC_FIREBASE_APP_ID
+    waitFor: ['build-and-push-frontend']
 
   # 3) BACKEND: build y push con Kaniko
   - id: 'build-and-push-backend'
@@ -51,7 +52,7 @@ steps:
       - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA
       - --cache=true
 
-  # 4) BACKEND: deploy a Cloud Run
+  # 4) BACKEND: deploy a Cloud Run (CORREGIDO)
   - id: 'deploy-backend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -66,9 +67,12 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-      - '--set-env-vars'
-      - |
-        FIREBASE_SERVICE_ACCOUNT_KEY=$_FIREBASE_SERVICE_ACCOUNT_KEY,
+      # ==========================================================
+      # ¡CORRECCIÓN AQUÍ!
+      # Usamos el formato de una sola línea con '=', que es más robusto
+      # para variables con contenido complejo como el JSON de la clave.
+      # ==========================================================
+      - '--set-env-vars=FIREBASE_SERVICE_ACCOUNT_KEY=$_FIREBASE_SERVICE_ACCOUNT_KEY,BIGQUERY_DATASET_ID=celesta_data'
     waitFor: ['build-and-push-backend']
 
 options:
