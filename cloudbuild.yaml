@@ -55,19 +55,21 @@ steps:
   # 4) BACKEND: deploy a Cloud Run (CORRECCIÓN FINAL)
   - id: 'deploy-backend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    # Cambiamos el entrypoint a bash para tener control total sobre el comando y las comillas
-    entrypoint: 'bash'
+    entrypoint: gcloud
     args:
-      - '-c'
-      # El comando gcloud se ejecuta dentro de un script de bash
-      # Usamos $$ para las variables de Cloud Build para que se expandan correctamente
-      - |
-        gcloud run deploy celesta-backend \
-          --image us-central1-docker.pkg.dev/$$PROJECT_ID/celesta-backend/backend:$$SHORT_SHA \
-          --region us-central1 \
-          --platform managed \
-          --allow-unauthenticated \
-          --set-env-vars="FIREBASE_SERVICE_ACCOUNT_KEY='$$_FIREBASE_SERVICE_ACCOUNT_KEY',BIGQUERY_DATASET_ID=celesta_data"
+    - 'run'
+    - 'deploy'
+    - 'celesta-backend'
+    - '--image'
+    - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
+    - '--region'
+    - 'us-central1'
+    - '--platform'
+    - 'managed'
+    - '--allow-unauthenticated'
+    - '--set-env-vars'
+    - |
+      FIREBASE_SERVICE_ACCOUNT_KEY=$_FIREBASE_SERVICE_ACCOUNT_KEY,BIGQUERY_DATASET_ID=celesta_data
     waitFor: ['build-and-push-backend']
 
 options:
