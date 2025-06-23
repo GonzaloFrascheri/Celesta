@@ -1,19 +1,18 @@
 require('dotenv').config();
-// const { Pool } = require('pg');
-import { BigQuery } from '@google-cloud/bigquery';
-import { v4 as uuidv4 } from 'uuid';
-import { initializeApp, credential as _credential, firestore } from 'firebase-admin';
-import cors from 'cors';
+const express   = require('express');
+const cors      = require('cors');
+const admin     = require('firebase-admin');
+const { BigQuery } = require('@google-cloud/bigquery');
+const { v4: uuidv4 } = require('uuid');
 
-console.log('ENV PORT        =', process.env.PORT);
-console.log('ENV DATASET_ID  =', process.env.BIGQUERY_DATASET_ID?.slice(0, 10), '…');
-console.log('ENV FIREBASE_B64 length =', (process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 || '').length);
-
+console.log('ENV PORT                     =', process.env.PORT);
+console.log('ENV BIGQUERY_DATASET_ID (cut)=', (process.env.BIGQUERY_DATASET_ID||'').slice(0,10), '…');
+console.log('ENV FIREBASE_SERVICE_ACCOUNT length =', (process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64||'').length);
 
 // Inicialización de la APP
 const app = express();
 app.use(cors());
-app.use(json()); // Middleware para poder leer JSON en el body
+app.use(express.json()); // ¡aquí Express.json sí que existe!
 
 const PORT = process.env.PORT || 3001;
 
@@ -59,8 +58,9 @@ const sendError = (res, message, statusCode = 500) => {
 /** Firestore */
 
 /** CLIENTES */
-// CREATE - Crear un nuevo Cliente
 const clientesCollection = db.collection('clientes');
+
+// CREATE - Crear un nuevo Cliente
 app.post('/api/clientes', async (req, res) => {
   try {
     const { nombre, rut, email, telefono } = req.body;
@@ -73,42 +73,41 @@ app.post('/api/clientes', async (req, res) => {
       rut,
       email: email || null,
       telefono: telefono || null,
-      created_at: firestore.FieldValue.serverTimestamp()
+      created_at: admin.firestore.FieldValue.serverTimestamp()
     };
     await clientesCollection.doc(nuevoCliente.id).set(nuevoCliente);
     console.log(`✅ Cliente '${nuevoCliente.nombre}' creado con ID: ${nuevoCliente.id}`);
-    sendSuccess(res, nuevoCliente, 201);
+    return sendSuccess(res, nuevoCliente, 201);
   } catch (error) {
     console.error('❌ Error al crear cliente:', error);
-    sendError(res, 'Error interno del servidor al crear el cliente');
+    return sendError(res, 'Error interno del servidor al crear el cliente');
   }
 });
 
+// READ ALL - Obtener todos los Clientes
 app.get('/api/clientes', async (req, res) => {
   try {
     const snapshot = await clientesCollection.orderBy('nombre').get();
     const clientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    sendSuccess(res, clientes);
+    return sendSuccess(res, clientes);
   } catch (error) {
     console.error('❌ Error al obtener clientes:', error);
-    sendError(res, 'Error interno del servidor al obtener los clientes');
+    return sendError(res, 'Error interno del servidor al obtener los clientes');
   }
 });
 
-// READ - Obtener un Cliente por su ID
+// READ ONE - Obtener un Cliente por su ID
 app.get('/api/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const doc = await clientesCollection.doc(id).get();
-
     if (!doc.exists) {
       return sendError(res, 'Cliente no encontrado', 404);
     }
-    const cliente = { id: doc.id, ...doc.data() };
-    sendSuccess(res, cliente);
+    return sendSuccess(res, { id: doc.id, ...doc.data() });
   } catch (error) {
     console.error(`❌ Error al obtener cliente ${req.params.id}:`, error);
-    sendError(res, 'Error interno del servidor al obtener el cliente');
+    return sendError(res, 'Error interno del servidor al obtener el cliente');
   }
 });
 
@@ -116,22 +115,22 @@ app.get('/api/clientes/:id', async (req, res) => {
 app.put('/api/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const datosAActualizar = req.body;
-
-    // No permitimos que se actualice el ID o la fecha de creación
+    // Clonamos el body y borramos id y created_at
+    const datosAActualizar = { ...req.body };
     delete datosAActualizar.id;
-    delete datosAActualizar.create_at;
+    delete datosAActualizar.created_at;
 
     if (Object.keys(datosAActualizar).length === 0) {
       return sendError(res, 'Se requiere al menos un campo para actualizar', 400);
     }
 
     await clientesCollection.doc(id).update(datosAActualizar);
+    const updatedDoc = await clientesCollection.doc(id).get();
     console.log(`✅ Cliente ${id} actualizado en Firestore.`);
-    sendSuccess(res, {  id: docActualizado.id, ...docActualizado.data() });
+    return sendSuccess(res, { id: updatedDoc.id, ...updatedDoc.data() });
   } catch (error) {
     console.error(`❌ Error al actualizar cliente ${req.params.id}:`, error);
-    sendError(res, 'Error interno del servidor al actualizar el cliente');
+    return sendError(res, 'Error interno del servidor al actualizar el cliente');
   }
 });
 
@@ -141,15 +140,16 @@ app.delete('/api/clientes/:id', async (req, res) => {
     const { id } = req.params;
     const docRef = clientesCollection.doc(id);
 
-    if(!(await docRef.get()).exists) {
+    if (!(await docRef.get()).exists) {
       return sendError(res, 'Cliente no encontrado', 404);
     }
 
     await docRef.delete();
     console.log(`✅ Cliente ${id} eliminado de Firestore.`);
-    res.status(204).send();
+    return res.status(204).send();
   } catch (error) {
-    sendError(res, `Error al eliminar cliente: ${error.message}`);
+    console.error(`❌ Error al eliminar cliente ${req.params.id}:`, error);
+    return sendError(res, 'Error interno del servidor al eliminar el cliente');
   }
 });
 
