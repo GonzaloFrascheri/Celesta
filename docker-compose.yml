@@ -6,7 +6,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Build-time args que tu Dockerfile convierte en ENV antes de npm run build
         NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY}
         NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
         NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
@@ -18,7 +17,6 @@ services:
       - .env
     ports:
       - "3000:3000"
-    # Opcional: puedes exponer NODE_ENV o cualquier var runtime
     environment:
       - NODE_ENV=development
 
@@ -26,20 +24,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      args:
-        # Si tu Dockerfile de backend necesita estos args, los puedes añadir
-        DB_USER: ${DB_USER}
-        DB_PASSWORD: ${DB_PASSWORD}
-        DB_HOST: ${DB_HOST}
-        DB_PORT: ${DB_PORT}
-        DB_DATABASE: ${DB_DATABASE}
     env_file:
       - .env
     ports:
       - "3001:3001"
     environment:
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_DATABASE=${DB_DATABASE}
+      - FIREBASE_SERVICE_ACCOUNT_KEY_BASE64=${FIREBASE_SERVICE_ACCOUNT_KEY_BASE64}
+      - BIGQUERY_DATASET_ID=${BIGQUERY_DATASET_ID}
