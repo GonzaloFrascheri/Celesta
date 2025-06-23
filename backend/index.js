@@ -16,7 +16,10 @@ const PORT = process.env.PORT || 3001;
 // 1. Firebase Admin SDK (Para Firestore)
 // Asegúrate de tener tus credenciales en una variable de entorno FIREBASE_SERVICE_ACCOUNT_KEY
 try {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+  const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
+  if (!base64) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 not found');
+  const serviceAccount = JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'));
+  
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
