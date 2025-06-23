@@ -1,117 +1,135 @@
 require('dotenv').config();
 const express = require('express');
-const { Pool } = require('pg');
+// const { Pool } = require('pg');
 const { BigQuery } = require('@google-cloud/bigquery');
 const { v4: uuidv4 } = require('uuid');
-
+const admin = require('firebase-admin');
 const cors = require('cors');
+
+// Inicialización de la APP
 const app = express();
 app.use(cors());
 app.use(express.json()); // Middleware para poder leer JSON en el body
 
 const PORT = process.env.PORT || 3001;
 
-// Configuración de BigQuery 
+// 1. Firebase Admin SDK (Para Firestore)
+// Asegúrate de tener tus credenciales en una variable de entorno FIREBASE_SERVICE_ACCOUNT_KEY
+try {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  console.log('✅ Firebase Admin SDK inicializado correctamente.');
+} catch (error) {
+  console.error('❌ Error al inicializar Firebase Admin SDK. Asegúrate de que la variable de entorno FIREBASE_SERVICE_ACCOUNT_KEY esté configurada.', error);
+}
+
+const db = admin.firestore();
 const bigquery = new BigQuery();
 
-// Configuración de la conexión a la base de datos (Cloud SQL)
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_DATABASE,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
-
-pool.on('error', (err, client) => {
-  console.error('Error inesperado en el cliente de la base de datos:', err);
-  process.exit(-1);
-});
+// --- HELPERS (Funciones de ayuda para un código más limpio) ---
+const sendSuccess = (res, data, statusCode = 200) => res.status(statusCode).json({ success: true, data });
+const sendError = (res, message, statusCode = 500) => {
+  console.error('❌ API Error:', message);
+  res.status(statusCode).json({ success: false, error: message });
+};
 
 // --- INICIO DE RUTAS DE LA API ---
-/** CloudSQL */
+/** Firestore */
 
 /** CLIENTES */
 // CREATE - Crear un nuevo Cliente
+const clientesCollection = db.collection('clientes');
 app.post('/api/clientes', async (req, res) => {
-  // MODIFICADO: Ya no pedimos el 'id' al cliente.
-  const { email, nombre, rol } = req.body;
-  if (!email || !nombre) {
-    return res.status(400).json({ error: 'email y nombre son requeridos' });
-  }
   try {
-    // MODIFICADO: Generamos el ID en el servidor.
-    const newId = uuidv4();
-    const query = 'INSERT INTO Cliente(id, email, nombre, rol, created_at) VALUES($1, $2, $3, $4, NOW()) RETURNING *';
-    // MODIFICADO: Usamos el ID generado.
-    const values = [newId, email, nombre, rol];
-    const result = await pool.query(query, values);
-    res.status(201).json(result.rows[0]);
+    const { nombre, rut, email, telefono } = req.body;
+    if (!nombre || !rut) {
+      return sendError(res, 'Los campos nombre y rut son requeridos', 400);
+    }
+    const nuevoCliente = {
+      id: uuidv4(),
+      nombre,
+      rut,
+      email: email || null,
+      telefono: telefono || null,
+      created_at: admin.firestore.FieldValue.serverTimestamp()
+    };
+    await clientesCollection.doc(nuevoCliente.id).set(nuevoCliente);
+    console.log(`✅ Cliente '${nuevoCliente.nombre}' creado con ID: ${nuevoCliente.id}`);
+    sendSuccess(res, nuevoCliente, 201);
   } catch (error) {
-    console.error('Error al insertar cliente:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al crear cliente:', error);
+    sendError(res, 'Error interno del servidor al crear el cliente');
   }
 });
 
-// READ - Obtener todos los Clientes
 app.get('/api/clientes', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM Cliente ORDER BY created_at DESC');
-    res.status(200).json(result.rows);
+    const snapshot = await clientesCollection.orderBy('nombre').get();
+    const clientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    sendSuccess(res, clientes);
   } catch (error) {
-    console.error('Error al obtener clientes:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al obtener clientes:', error);
+    sendError(res, 'Error interno del servidor al obtener los clientes');
   }
 });
 
 // READ - Obtener un Cliente por su ID
 app.get('/api/clientes/:id', async (req, res) => {
-  const { id } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM Cliente WHERE id = $1', [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Cliente no encontrado' });
+    const { id } = req.params;
+    const doc = await clientesCollection.doc(id).get();
+
+    if (!doc.exists) {
+      return sendError(res, 'Cliente no encontrado', 404);
     }
-    res.status(200).json(result.rows[0]);
+    const cliente = { id: doc.id, ...doc.data() };
+    sendSuccess(res, cliente);
   } catch (error) {
-    console.error(`Error al obtener cliente ${id}:`, error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error(`❌ Error al obtener cliente ${req.params.id}:`, error);
+    sendError(res, 'Error interno del servidor al obtener el cliente');
   }
 });
 
 // UPDATE - Actualizar un Cliente por su ID
 app.put('/api/clientes/:id', async (req, res) => {
-  const { id } = req.params;
-  const { email, nombre, rol } = req.body;
-  if (!email && !nombre && !rol) {
-    return res.status(400).json({ error: 'Se requiere al menos un campo para actualizar (email, nombre, rol)' });
-  }
   try {
-    const query = 'UPDATE Cliente SET email = COALESCE($1, email), nombre = COALESCE($2, nombre), rol = COALESCE($3, rol) WHERE id = $4 RETURNING *';
-    const values = [email, nombre, rol, id];
-    const result = await pool.query(query, values);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Cliente no encontrado para actualizar' });
+    const { id } = req.params;
+    const datosAActualizar = req.body;
+
+    // No permitimos que se actualice el ID o la fecha de creación
+    delete datosAActualizar.id;
+    delete datosAActualizar.create_at;
+
+    if (Object.keys(datosAActualizar).length === 0) {
+      return sendError(res, 'Se requiere al menos un campo para actualizar', 400);
     }
-    res.status(200).json(result.rows[0]);
+
+    await clientesCollection.doc(id).update(datosAActualizar);
+    console.log(`✅ Cliente ${id} actualizado en Firestore.`);
+    sendSuccess(res, {  id: docActualizado.id, ...docActualizado.data() });
   } catch (error) {
-    console.error(`Error al actualizar cliente ${id}:`, error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error(`❌ Error al actualizar cliente ${req.params.id}:`, error);
+    sendError(res, 'Error interno del servidor al actualizar el cliente');
   }
 });
 
 // DELETE - Eliminar un Cliente por su ID
 app.delete('/api/clientes/:id', async (req, res) => {
-  const { id } = req.params;
   try {
-    const result = await pool.query('DELETE FROM Cliente WHERE id = $1 RETURNING *', [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Cliente no encontrado para eliminar' });
+    const { id } = req.params;
+    const docRef = clientesCollection.doc(id);
+
+    if(!(await docRef.get()).exists) {
+      return sendError(res, 'Cliente no encontrado', 404);
     }
-    res.status(200).json({ message: 'Cliente eliminado con éxito', cliente: result.rows[0] });
+
+    await docRef.delete();
+    console.log(`✅ Cliente ${id} eliminado de Firestore.`);
+    res.status(204).send();
   } catch (error) {
-    console.error(`Error al eliminar cliente ${id}:`, error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    sendError(res, `Error al eliminar cliente: ${error.message}`);
   }
 });
 

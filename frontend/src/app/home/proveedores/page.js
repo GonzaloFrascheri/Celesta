@@ -72,33 +72,20 @@ export default function ProveedorPage() {
         <tbody>
           {proveedores.map((proveedor) => (
             <tr key={proveedor.id}>
-              <td>{proveedor.rut}</td>
-              <td>{proveedor.razon_social}</td>
-              <td>{proveedor.giro || 'N/A'}</td>
-              <td>
+              {/* AÑADIMOS data-label A CADA CELDA */}
+              <td data-label="RUT">{proveedor.rut}</td>
+              <td data-label="Razón Social">{proveedor.razon_social}</td>
+              <td data-label="Giro">{proveedor.giro || 'N/A'}</td>
+              <td data-label="Fecha de Creación">
                 {proveedor.create_at && proveedor.create_at.value 
                   ? new Date(proveedor.create_at.value).toLocaleDateString() 
                   : 'N/A'}
               </td>
-              {/* ========================================================== */}
-              {/* ¡CORRECCIÓN AQUÍ! Envolvemos los botones en un div         */}
-              {/* ========================================================== */}
-              <td>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
-                  <button 
-                    onClick={() => router.push(`/home/proveedores/${proveedor.id}`)}
-                    className={styles.actionButton} 
-                    title="Editar"
-                  >
-                    <FaEdit />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(proveedor.id, proveedor.razon_social)} 
-                    className={`${styles.actionButton} ${styles.deleteButton}`} 
-                    title="Eliminar"
-                  >
-                    <FaTrash />
-                  </button>
+              <td data-label="Acciones">
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  {/* Los botones van aquí dentro como ya los tienes */}
+                  <button onClick={() => router.push(`/home/proveedores/${proveedor.id}`)} /* ... */><FaEdit /></button>
+                  <button onClick={() => handleDelete(proveedor.id, proveedor.razon_social)} /* ... */><FaTrash /></button>
                 </div>
               </td>
             </tr>

@@ -1,0 +1,72 @@
+/* frontend/src/app/home/HomeLayout.module.css (Corregido) */
+
+.layoutContainer {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* El contenedor del sidebar en desktop */
+.sidebarWrapper {
+  width: 250px;
+  flex-shrink: 0;
+}
+
+/* El contenido principal ahora ocupará el espacio restante */
+.mainContent {
+  flex-grow: 1;
+  background-color: #f4f7fa;
+  padding-left: 0;
+  /* Este padding-left es el truco para que en desktop no se superponga */
+  /* Lo eliminaremos en la vista móvil */
+}
+
+.mobileHeader {
+  display: none; /* Oculto en desktop por defecto */
+}
+
+/* --- VISTA MÓVIL (PANTALLAS DE 768px O MENOS) --- */
+@media (max-width: 768px) {
+  /* En móvil, el sidebarWrapper se convierte en un menú flotante */
+  .sidebarWrapper {
+    position: fixed;
+    left: -100%; /* Empieza fuera de la pantalla */
+    top: 0;
+    width: 250px;
+    height: 100%;
+    z-index: 1000;
+    transition: left 0.3s ease-in-out;
+  }
+
+  /* La clase que se añade con JS para mostrar el menú */
+  .sidebarOpen {
+    left: 0;
+  }
+  
+  /* Hacemos que la cabecera móvil aparezca */
+  .mobileHeader {
+    display: flex;
+    align-items: center;
+    background-color: #fff;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .menuButton {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 1001;
+  }
+
+  .mobileLogo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0 auto; /* Centramos el logo */
+    transform: translateX(-1.25rem); /* Ajuste para compensar el botón de menú */
+  }
+  
+  .mainContent {
+      width: 100%;
+  }
+}

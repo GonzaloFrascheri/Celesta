@@ -66,6 +66,10 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - |
+        FIREBASE_SERVICE_ACCOUNT_KEY=$_FIREBASE_SERVICE_ACCOUNT_KEY,
+      waitFor: ['build-and-push-backend']
 
 options:
   logging: CLOUD_LOGGING_ONLY

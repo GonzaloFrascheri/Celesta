@@ -42,7 +42,7 @@ export default function NuevoProveedorPage() {
 
     try {
       // CORRECCIÓN: Apuntamos a la ruta completa de tu API.
-      await apiClient.post('/api/proveedor', payload);
+      await apiClient.post('/proveedor', payload);
       alert('¡Proveedor agregado con éxito!');
       router.push('/home/proveedores');
     } catch (err) {

@@ -2,7 +2,10 @@
 import Link from 'next/link';
 import styles from './Sidebar.module.css';
 
-export default function Sidebar() {
+// ==========================================================
+// ¡CAMBIO CLAVE! Ahora aceptamos la prop 'onLinkClick'.
+// ==========================================================
+export default function Sidebar({ onLinkClick }) { 
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logo}>
@@ -10,23 +13,25 @@ export default function Sidebar() {
       </div>
       <ul className={styles.navList}>
         <li>
-          {/* Usamos el componente Link de Next.js para la navegación */}
-          <Link href="/home" className={styles.navLink}>
+          {/* ========================================================== */}
+          {/* ¡AÑADIMOS onClick A CADA LINK!                            */}
+          {/* ========================================================== */}
+          <Link href="/home" className={styles.navLink} onClick={onLinkClick}>
             Inicio
           </Link>
         </li>
         <li>
-          <Link href="/home/compras" className={styles.navLink}>
+          <Link href="/home/compras" className={styles.navLink} onClick={onLinkClick}>
             Compras
           </Link>
         </li>
         <li>
-          <Link href="/home/proveedores" className={styles.navLink}>
+          <Link href="/home/proveedores" className={styles.navLink} onClick={onLinkClick}>
             Proveedores
           </Link>
         </li>
-         <li>
-          <Link href="/home/categorias" className={styles.navLink}>
+        <li>
+          <Link href="/home/categorias" className={styles.navLink} onClick={onLinkClick}>
             Categorías
           </Link>
         </li>
