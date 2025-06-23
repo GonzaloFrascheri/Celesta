@@ -1,5 +1,4 @@
 require('dotenv').config();
-import express, { json } from 'express';
 // const { Pool } = require('pg');
 import { BigQuery } from '@google-cloud/bigquery';
 import { v4 as uuidv4 } from 'uuid';
