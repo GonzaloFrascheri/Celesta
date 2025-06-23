@@ -1,15 +1,15 @@
 require('dotenv').config();
-const express = require('express');
+import express, { json } from 'express';
 // const { Pool } = require('pg');
-const { BigQuery } = require('@google-cloud/bigquery');
-const { v4: uuidv4 } = require('uuid');
-const admin = require('firebase-admin');
-const cors = require('cors');
+import { BigQuery } from '@google-cloud/bigquery';
+import { v4 as uuidv4 } from 'uuid';
+import { initializeApp, credential as _credential, firestore } from 'firebase-admin';
+import cors from 'cors';
 
 // Inicialización de la APP
 const app = express();
 app.use(cors());
-app.use(express.json()); // Middleware para poder leer JSON en el body
+app.use(json()); // Middleware para poder leer JSON en el body
 
 const PORT = process.env.PORT || 3001;
 
@@ -17,19 +17,32 @@ const PORT = process.env.PORT || 3001;
 // Asegúrate de tener tus credenciales en una variable de entorno FIREBASE_SERVICE_ACCOUNT_KEY
 try {
   const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
-  if (!base64) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 not found');
-  const serviceAccount = JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'));
-  
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+  if (!base64) {
+    console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 not found');
+    process.exit(1);
+  }
+  const serviceAccount = JSON.parse(
+    Buffer.from(base64, 'base64').toString('utf-8')
+  );
+
+  initializeApp({
+    credential: _credential.cert(serviceAccount)
   });
   console.log('✅ Firebase Admin SDK inicializado correctamente.');
 } catch (error) {
   console.error('❌ Error al inicializar Firebase Admin SDK. Asegúrate de que la variable de entorno FIREBASE_SERVICE_ACCOUNT_KEY esté configurada.', error);
 }
 
-const db = admin.firestore();
+const db = firestore();
 const bigquery = new BigQuery();
+
+// Leer el dataset de BigQuery desde la env var
+const DATASET_ID = process.env.BIGQUERY_DATASET_ID;
+if (!DATASET_ID) {
+  console.error('❌ BIGQUERY_DATASET_ID no está definido');
+  process.exit(1);
+}
+console.log('🔍 BigQuery dataset configurado como:', DATASET_ID);
 
 // --- HELPERS (Funciones de ayuda para un código más limpio) ---
 const sendSuccess = (res, data, statusCode = 200) => res.status(statusCode).json({ success: true, data });
@@ -56,7 +69,7 @@ app.post('/api/clientes', async (req, res) => {
       rut,
       email: email || null,
       telefono: telefono || null,
-      created_at: admin.firestore.FieldValue.serverTimestamp()
+      created_at: firestore.FieldValue.serverTimestamp()
     };
     await clientesCollection.doc(nuevoCliente.id).set(nuevoCliente);
     console.log(`✅ Cliente '${nuevoCliente.nombre}' creado con ID: ${nuevoCliente.id}`);
@@ -153,7 +166,7 @@ app.post('/api/compras', async (req, res) => {
   }
 
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const compraId = uuidv4();
 
     const monto_total = detalles.reduce((total, item) => {
@@ -232,7 +245,7 @@ app.post('/api/compras', async (req, res) => {
 // READ - Obtener todas las Compras
 app.get('/api/compras', async (req, res) => {
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Compras';
     const query = `SELECT * FROM \`${datasetId}.${tableId}\``;
     const [rows] = await bigquery.query(query);
@@ -247,7 +260,7 @@ app.get('/api/compras', async (req, res) => {
 app.get('/api/compras/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Compras';
     const query = `SELECT * FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
     const options = {
@@ -291,7 +304,7 @@ app.put('/api/compras/:id', async (req, res) => {
   }
 
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Compras';
     const query = `UPDATE \`${datasetId}.${tableId}\` SET ${setClauses.join(', ')} WHERE id = @id`;
     
@@ -322,7 +335,7 @@ app.put('/api/compras/:id', async (req, res) => {
 app.delete('/api/compras/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Compras';
     const query = `DELETE FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
     const options = {
@@ -348,7 +361,7 @@ app.post('/api/proveedor', async (req, res) => {
     return res.status(400).json({ error: 'Los campos rut y razon_social son requeridos' });
   }
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Proveedor';
 
     const nuevoProveedor = {
@@ -391,7 +404,7 @@ app.post('/api/proveedor', async (req, res) => {
 // READ - Obtener todos los Proveedores
 app.get('/api/proveedor', async (req, res) => {
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Proveedor';
     const query = `SELECT * FROM \`${datasetId}.${tableId}\` ORDER BY razon_social ASC`;
     
@@ -408,7 +421,7 @@ app.get('/api/proveedor', async (req, res) => {
 app.get('/api/proveedor/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Proveedor';
     const query = `SELECT * FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
     const options = {
@@ -438,7 +451,7 @@ app.put('/api/proveedor/:id', async (req, res) => {
   }
 
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Proveedor';
 
     // Construimos la consulta UPDATE dinámicamente
@@ -474,7 +487,7 @@ app.put('/api/proveedor/:id', async (req, res) => {
 app.delete('/api/proveedor/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Proveedor';
     const query = `DELETE FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
     const options = {
@@ -500,7 +513,7 @@ app.post('/api/categoria', async (req, res) => {
     return res.status(400).json({ error: 'El campo nombre es requerido' });
   }
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Categoria';
 
     const nuevaCategoria = {
@@ -534,7 +547,7 @@ app.post('/api/categoria', async (req, res) => {
 // READ - Obtener todas las Categorías
 app.get('/api/categoria', async (req, res) => {
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Categoria';
     const query = `SELECT * FROM \`${datasetId}.${tableId}\` ORDER BY nombre ASC`;
     
@@ -550,7 +563,7 @@ app.get('/api/categoria', async (req, res) => {
 app.get('/api/categoria/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Categoria';
     const query = `SELECT * FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
     const options = {
@@ -580,7 +593,7 @@ app.put('/api/categoria/:id', async (req, res) => {
   }
 
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Categoria';
     
     const query = `UPDATE \`${datasetId}.${tableId}\` SET nombre = @nombre WHERE id = @id`;
@@ -610,7 +623,7 @@ app.put('/api/categoria/:id', async (req, res) => {
 app.delete('/api/categoria/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Categoria';
     const query = `DELETE FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
     const options = {
@@ -630,7 +643,7 @@ app.delete('/api/categoria/:id', async (req, res) => {
 // READ - Obtener todos los Detalles de Compras
 app.get('/api/detalles-compras', async (req, res) => {
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Detalles_Compras';
     const query = `SELECT * FROM \`${datasetId}.${tableId}\``;
     const [rows] = await bigquery.query(query);
@@ -645,7 +658,7 @@ app.get('/api/detalles-compras', async (req, res) => {
 app.get('/api/detalles-compras/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Detalles_Compras';
     const query = `SELECT * FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
     const options = {
@@ -689,7 +702,7 @@ app.put('/api/detalles-compras/:id', async (req, res) => {
   }
 
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Detalles_Compras';
     const query = `UPDATE \`${datasetId}.${tableId}\` SET ${setClauses.join(', ')} WHERE id = @id`;
     
@@ -719,7 +732,7 @@ app.put('/api/detalles-compras/:id', async (req, res) => {
 app.delete('/api/detalles-compras/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Detalles_Compras';
     const query = `DELETE FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
     const options = {
@@ -742,7 +755,7 @@ app.delete('/api/detalles-compras/:id', async (req, res) => {
 // READ - Obtener todos los Productos Maestros
 app.get('/api/productos-maestros', async (req, res) => {
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Productos_Maestros';
 
     // Hacemos la consulta ordenando por nombre para una mejor visualización
@@ -761,7 +774,7 @@ app.get('/api/productos-maestros', async (req, res) => {
 app.get('/api/productos-maestros/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const datasetId = 'celesta_data';
+    const datasetId = 'BIGQUERY_DATASET_ID';
     const tableId = 'Productos_Maestros';
 
     const query = `SELECT * FROM \`${datasetId}.${tableId}\` WHERE id = @id`;
