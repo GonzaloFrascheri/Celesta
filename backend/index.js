@@ -6,6 +6,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { initializeApp, credential as _credential, firestore } from 'firebase-admin';
 import cors from 'cors';
 
+console.log('ENV PORT        =', process.env.PORT);
+console.log('ENV DATASET_ID  =', process.env.BIGQUERY_DATASET_ID?.slice(0, 10), '…');
+console.log('ENV FIREBASE_B64 length =', (process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 || '').length);
+
+
 // Inicialización de la APP
 const app = express();
 app.use(cors());
