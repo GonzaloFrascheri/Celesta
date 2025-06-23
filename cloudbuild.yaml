@@ -57,18 +57,17 @@ steps:
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
-    - 'run'
-    - 'deploy'
-    - 'celesta-backend'
-    - '--image'
-    - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA'
-    - '--region'
-    - 'us-central1'
-    - '--platform'
-    - 'managed'
-    - '--allow-unauthenticated'
-    - --set-env-vars=FIREBASE_SERVICE_ACCOUNT_KEY_BASE64=$_FIREBASE_SERVICE_ACCOUNT_KEY_BASE64,BIGQUERY_DATASET_ID=$_BIGQUERY_DATASET_ID
-
+    - run
+    - deploy
+    - celesta-backend
+    - --image
+    - us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA
+    - --region
+    - us-central1
+    - --platform
+    - managed
+    - --allow-unauthenticated
+    - --set-env-vars=FIREBASE_SERVICE_ACCOUNT_KEY_BASE64=$_FIREBASE_SERVICE_ACCOUNT_KEY_BASE64,BIGQUERY_DATASET_ID=tu_dataset
     waitFor: ['build-and-push-backend']
 
 options:

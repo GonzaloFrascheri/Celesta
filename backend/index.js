@@ -5,99 +5,103 @@ const admin = require('firebase-admin');
 const { BigQuery } = require('@google-cloud/bigquery');
 const { v4: uuidv4 } = require('uuid');
 
-// Inicialización de Firebase Admin con la clave en Base64
-const b64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
-if (!b64) {
-  console.error('❌ Falta FIREBASE_SERVICE_ACCOUNT_KEY_BASE64');
-  process.exit(1);
-}
-const serviceAccount = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
-const db = admin.firestore();
-const bigquery = new BigQuery();
-
-// Dataset de BigQuery via env var
-const DATASET_ID = process.env.BIGQUERY_DATASET_ID;
-if (!DATASET_ID) {
-  console.error('❌ Falta BIGQUERY_DATASET_ID');
-  process.exit(1);
-}
-
+// --- Inicializa Express ---
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Helpers
+const PORT = process.env.PORT || 8080;
+
+// --- Inicializa Firebase Admin ---
+const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
+if (!base64) {
+  console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 no definido');
+  process.exit(1);
+}
+const serviceAccount = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+const db = admin.firestore();
+
+// --- Inicializa BigQuery ---
+const DATASET_ID = process.env.BIGQUERY_DATASET_ID;
+if (!DATASET_ID) {
+  console.error('❌ BIGQUERY_DATASET_ID no definido');
+  process.exit(1);
+}
+const bigquery = new BigQuery();
+
+// --- Helpers ---
 const sendSuccess = (res, data, code = 200) => res.status(code).json({ success: true, data });
 const sendError   = (res, msg, code = 500) => res.status(code).json({ success: false, error: msg });
 
-// --- RUTAS DE CLIENTES (ejemplo) ---
-const clientesCol = db.collection('clientes');
+// --- RUTAS DE CLIENTES (Firestore) ---
+const clientes = db.collection('clientes');
 
-// CREATE
 app.post('/api/clientes', async (req, res) => {
   try {
     const { nombre, rut, email, telefono } = req.body;
-    if (!nombre || !rut) return sendError(res, 'nombre y rut son requeridos', 400);
+    if (!nombre || !rut) return sendError(res, 'nombre y rut requeridos', 400);
 
-    const nuevo = {
-      id: uuidv4(),
-      nombre, rut,
-      email: email||null,
-      telefono: telefono||null,
-      created_at: admin.firestore.FieldValue.serverTimestamp()
-    };
-    await clientesCol.doc(nuevo.id).set(nuevo);
-    return sendSuccess(res, nuevo, 201);
+    const nuevo = { id: uuidv4(), nombre, rut, email: email||null, telefono: telefono||null,
+      created_at: admin.firestore.FieldValue.serverTimestamp() };
+
+    await clientes.doc(nuevo.id).set(nuevo);
+    sendSuccess(res, nuevo, 201);
   } catch (e) {
     console.error(e);
-    return sendError(res, 'Error interno al crear cliente');
+    sendError(res, 'Error interno creando cliente');
   }
 });
 
-// READ ALL
-app.get('/api/clientes', async (req, res) => {
+app.get('/api/clientes', async (_, res) => {
   try {
-    const snap = await clientesCol.orderBy('nombre').get();
+    const snap = await clientes.orderBy('nombre').get();
     const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    return sendSuccess(res, list);
+    sendSuccess(res, list);
   } catch (e) {
     console.error(e);
-    return sendError(res, 'Error interno al listar clientes');
+    sendError(res, 'Error interno leyendo clientes');
   }
 });
 
-// UPDATE
+app.get('/api/clientes/:id', async (req, res) => {
+  try {
+    const doc = await clientes.doc(req.params.id).get();
+    if (!doc.exists) return sendError(res, 'Cliente no encontrado', 404);
+    sendSuccess(res, { id: doc.id, ...doc.data() });
+  } catch (e) {
+    console.error(e);
+    sendError(res, 'Error interno leyendo cliente');
+  }
+});
+
 app.put('/api/clientes/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const data = { ...req.body };
-    delete data.id;
-    delete data.created_at;
-    if (Object.keys(data).length === 0) return sendError(res, 'Nada para actualizar', 400);
+    const updates = { ...req.body };
+    delete updates.id;
+    delete updates.created_at;
+    if (Object.keys(updates).length === 0) return sendError(res, 'Nada para actualizar', 400);
 
-    await clientesCol.doc(id).update(data);
-    const upd = await clientesCol.doc(id).get();
-    return sendSuccess(res, { id: upd.id, ...upd.data() });
+    await clientes.doc(req.params.id).update(updates);
+    const updated = await clientes.doc(req.params.id).get();
+    sendSuccess(res, { id: updated.id, ...updated.data() });
   } catch (e) {
     console.error(e);
-    return sendError(res, 'Error interno al actualizar cliente');
+    sendError(res, 'Error interno actualizando cliente');
   }
 });
 
-// DELETE
 app.delete('/api/clientes/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const ref = clientesCol.doc(id);
+    const ref = clientes.doc(req.params.id);
     if (!(await ref.get()).exists) return sendError(res, 'Cliente no existe', 404);
     await ref.delete();
-    return res.status(204).send();
+    res.status(204).send();
   } catch (e) {
     console.error(e);
-    return sendError(res, 'Error interno al eliminar cliente');
+    sendError(res, 'Error interno eliminando cliente');
   }
 });
 
@@ -752,7 +756,6 @@ app.get('/api/productos-maestros/:id', async (req, res) => {
 
 // --- FIN DE RUTAS DE LA API ---
 
-const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`🛡️  Server escuchando en puerto ${PORT}`);
+  console.log(`Servidor escuchando en puerto ${PORT}`);
 });
