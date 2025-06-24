@@ -52,20 +52,6 @@ steps:
       - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA
       - --cache=true
 
-  - id: 'Depurando-variable-BigQuery'
-    name: 'ubuntu'
-    entrypoint: 'bash'
-    args:
-    - '-c'
-    - |
-      echo "********************************************************"
-      echo "INICIANDO PASO DE DEPURACIÓN"
-      echo "Verificando el valor de la variable de sustitución..."
-      echo "El valor de _BIGQUERY_DATASET_ID es: '$_BIGQUERY_DATASET_ID'"
-      echo "FIN DEL PASO DE DEPURACIÓN"
-      echo "********************************************************"
-    waitFor: ['build-and-push-backend']
-
   # 4) BACKEND: deploy a Cloud Run (CORRECCIÓN FINAL)
   - id: 'deploy-backend'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -81,9 +67,8 @@ steps:
     - --platform
     - managed
     - --allow-unauthenticated
-    - --set-secrets=FIREBASE_SERVICE_ACCOUNT_KEY_JSON=firebase-service-account-json:latest
-    - --set-env-vars=BIGQUERY_DATASET_ID=$_BIGQUERY_DATASET_ID
-    waitFor: ['Depurando-variable-BigQuery']
+    - --set-secrets=FIREBASE_SERVICE_ACCOUNT_KEY_JSON=firebase-service-account-json:latest,BIGQUERY_DATASET_ID=bigquery-dataset-id:latest
+    waitFor: ['build-and-push-backend']
 
 options:
   logging: CLOUD_LOGGING_ONLY
