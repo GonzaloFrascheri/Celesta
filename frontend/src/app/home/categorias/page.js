@@ -19,7 +19,7 @@ export default function CategoriasPage() {
       // CORRECCIÓN: Apuntamos a la ruta de la API de categorías
       const response = await apiClient.get('/categoria');
       // Tu API GET devuelve un array directamente, lo cual está perfecto.
-      setCategorias(response.data); 
+      setCategorias(response.data.data || []); 
       setError(null);
     } catch (error) {
       console.error("Error al cargar las categorías:", error);

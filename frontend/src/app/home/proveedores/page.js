@@ -18,7 +18,7 @@ export default function ProveedorPage() {
     try {
       setLoading(true);
       const response = await apiClient.get('/proveedor');
-      setProveedores(response.data);
+      setProveedores(response.data.data || []);
       setError(null);
     } catch (error) {
       console.error("Error al cargar los proveedores:", error);

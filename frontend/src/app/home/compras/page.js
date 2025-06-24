@@ -17,7 +17,7 @@ export default function ComprasPage() {
       try {
         setLoading(true);
         const response = await apiClient.get('/compras');
-        setCompras(response.data);
+        setCompras(response.data.data || []);
         setError(null);
       } catch (err) {
         console.error("Error al obtener las compras:", err);
