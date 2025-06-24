@@ -36,6 +36,19 @@ const bigquery = new BigQuery();
 const sendSuccess = (res, data, code = 200) => res.status(code).json({ success: true, data });
 const sendError   = (res, msg, code = 500) => res.status(code).json({ success: false, error: msg });
 
+// --- Health Check para la Ruta Raíz ---
+app.get('/', (req, res) => {
+  // 1. Log para que lo veas en Cloud Logging
+  console.log('✅ Health check en la ruta raíz / fue accedido exitosamente.');
+
+  // 2. Respuesta JSON para mostrar en el navegador
+  res.status(200).json({
+    status: 'ok',
+    message: 'La API de Celesta está en línea y funcionando.',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // --- RUTAS DE CLIENTES (Firestore) ---
 const clientes = db.collection('clientes');
 
