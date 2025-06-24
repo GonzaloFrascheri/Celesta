@@ -20,7 +20,7 @@ export default function EditarCategoriaPage() {
         try {
           setLoading(true);
           const response = await apiClient.get(`/api/categoria/${id}`);
-          setNombre(response.data.nombre); // Cargamos el nombre en el estado
+          setNombre(response.data.nombre);
         } catch (err) {
           console.error("Error al cargar la categoría:", err);
           setError("No se pudo cargar la categoría para editar.");

@@ -25,7 +25,7 @@ export default function EditarProveedorPage() {
         try {
           setLoading(true);
           const response = await apiClient.get(`/proveedor/${id}`);
-          setProveedor(response.data); // Guardamos los datos del proveedor en el estado
+          setProveedor(response.data.data || []);
         } catch (err) {
           console.error("Error al cargar el proveedor:", err);
           setError("No se pudo cargar la información del proveedor.");

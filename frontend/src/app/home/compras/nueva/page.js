@@ -32,7 +32,7 @@ export default function NuevaCompraPage() {
     const fetchProveedores = async () => {
       try {
         const response = await apiClient.get('/proveedor');
-        setProveedores(response.data);
+        setProveedores(response.data.data || []);
       } catch (err) {
         console.error("Error al cargar proveedores", err);
         setError("No se pudieron cargar los proveedores.");
