@@ -67,6 +67,7 @@ steps:
     - --platform
     - managed
     - --allow-unauthenticated
+    - --remove-env-vars=BIGQUERY_DATASET_ID
     - --set-secrets=FIREBASE_SERVICE_ACCOUNT_KEY_JSON=firebase-service-account-json:latest,BIGQUERY_DATASET_ID=bigquery-dataset-id:latest
     waitFor: ['build-and-push-backend']
 
