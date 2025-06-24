@@ -67,7 +67,7 @@ steps:
     - --platform
     - managed
     - --allow-unauthenticated
-    - --set-env-vars=FIREBASE_SERVICE_ACCOUNT_KEY_BASE64=$_FIREBASE_SERVICE_ACCOUNT_KEY_BASE64,BIGQUERY_DATASET_ID=tu_dataset
+    - --set-env-vars=FIREBASE_SERVICE_ACCOUNT_KEY_BASE64=$_FIREBASE_SERVICE_ACCOUNT_KEY_BASE64,BIGQUERY_DATASET_ID=$_BIGQUERY_DATASET_ID
     waitFor: ['build-and-push-backend']
 
 options:
