@@ -13,12 +13,12 @@ app.use(express.json());
 const PORT = process.env.PORT || 8080;
 
 // --- Inicializa Firebase Admin ---
-const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
-if (!base64) {
-  console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 no definido');
+const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_JSON;
+if (!serviceAccountJson) {
+  console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY_JSON no definido');
   process.exit(1);
 }
-const serviceAccount = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+const serviceAccount = JSON.parse(serviceAccountJson);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
