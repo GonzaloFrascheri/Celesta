@@ -5,9 +5,18 @@ const admin = require('firebase-admin');
 const { BigQuery } = require('@google-cloud/bigquery');
 const { v4: uuidv4 } = require('uuid');
 
-// --- Inicializa Express ---
 const app = express();
-app.use(cors());
+
+// --- INICIO DE LA MODIFICACIÓN DE CORS ---
+// Define la URL exacta de tu frontend desplegado
+const corsOptions = {
+  origin: 'https://celesta-frontend-1069223002409.us-central1.run.app'
+};
+
+// Aplica la configuración de CORS específica
+app.use(cors(corsOptions));
+// --- FIN DE LA MODIFICACIÓN DE CORS ---
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 8080;
