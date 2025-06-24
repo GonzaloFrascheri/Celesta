@@ -21,6 +21,7 @@ const geistMono = Geist_Mono({
 });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  console.log("API Key REAL que usa el navegador:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
   return (
     <html lang="es">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
