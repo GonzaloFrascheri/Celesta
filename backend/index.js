@@ -9,37 +9,46 @@ const app = express();
 
 // --- INICIO DE LA MODIFICACIÓN DE CORS ---
 // Define la URL exacta de tu frontend desplegado
-const corsOptions = {
-  origin: 'https://celesta-frontend-1069223002409.us-central1.run.app'
-};
-
+const allowedOrigins = [
+  'https://celesta-frontend-1069223002409.us-central1.run.app',
+  'http://localhost:3000'                                     
+];
 // Aplica la configuración de CORS específica
-app.use(cors(corsOptions));
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Permite peticiones sin 'origin' (como las de Postman o apps móviles)
+    if (!origin) return callback(null, true);
+    
+    // Si el origen de la petición está en nuestra lista blanca, permite el acceso
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'La política de CORS para este sitio no permite acceso desde el origen especificado.';
+      return callback(new Error(msg), false);
+    }
+    
+    return callback(null, true);
+  }
+};
 // --- FIN DE LA MODIFICACIÓN DE CORS ---
 
+// Aplica la configuración de CORS inteligente
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const PORT = process.env.PORT || 8080;
 
 // --- Inicializa Firebase Admin ---
-const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_JSON;
-if (!serviceAccountJson) {
-  console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY_JSON no definido');
-  process.exit(1);
-}
-const serviceAccount = JSON.parse(serviceAccountJson);
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+admin.initializeApp();
 const db = admin.firestore();
 
-// --- Inicializa BigQuery ---
+// --- Inicializa BigQuery (Versión CORREGIDA) ---
+console.log("--- [Punto 6] Intentando inicializar BigQuery... ---");
 const DATASET_ID = process.env.BIGQUERY_DATASET_ID;
 if (!DATASET_ID) {
   console.error('❌ BIGQUERY_DATASET_ID no definido');
   process.exit(1);
 }
 const bigquery = new BigQuery();
+console.log("--- [Punto 7] ✅ BigQuery inicializado con éxito ---");
 
 // --- Helpers ---
 const sendSuccess = (res, data, code = 200) => res.status(code).json({ success: true, data });
@@ -56,6 +65,30 @@ app.get('/', (req, res) => {
     message: 'La API de Celesta está en línea y funcionando.',
     timestamp: new Date().toISOString()
   });
+});
+
+// ===================================================================
+// === NUEVO ENDPOINT DE MACHINE LEARNING ============================
+// ===================================================================
+app.post('/api/sugerir-producto', async (req, res) => {
+  const { descripcion_original } = req.body;
+  if (!descripcion_original) {
+    return sendError(res, 'La "descripcion_original" es requerida.', 400);
+  }
+  try {
+    const query = `
+      SELECT predicted_producto_maestro_id as producto_sugerido
+      FROM ML.PREDICT(MODEL \`celesta_data.product_classifier\`, (SELECT @desc as descripcion_original))`;
+    const [rows] = await bigquery.query({ query: query, params: { desc: descripcion_original } });
+    if (rows.length > 0) {
+      sendSuccess(res, { producto_sugerido: rows[0].producto_sugerido });
+    } else {
+      sendError(res, 'No se pudo obtener una sugerencia.', 404);
+    }
+  } catch (error) {
+    console.error('Error al predecir con el modelo de ML:', error);
+    sendError(res, 'Error interno al procesar la sugerencia.');
+  }
 });
 
 // --- RUTAS DE CLIENTES (Firestore) ---
@@ -135,6 +168,74 @@ app.delete('/api/clientes/:id', async (req, res) => {
 
 /** BigQuery **/
 
+// ===================================================================
+// === ENDPOINT DE PROCESAMIENTO POR LOTES ===========================
+// ===================================================================
+app.post('/api/procesar-compras-pendientes', async (req, res) => {
+    try {
+      // Buscamos compras pendientes o aquellas que nunca tuvieron un estado
+      const queryPendientes = `SELECT id FROM \`${DATASET_ID}.Compras\` WHERE estado_ml = 'PENDIENTE' OR estado_ml IS NULL`;
+      const [comprasPendientes] = await bigquery.query(queryPendientes);
+  
+      if (comprasPendientes.length === 0) {
+        return sendSuccess(res, { message: 'No hay compras pendientes para procesar.' });
+      }
+  
+      let procesadasConExito = 0;
+      let procesadasConError = 0;
+  
+      for (const compra of comprasPendientes) {
+        try {
+          // Buscamos solo los detalles de esta compra que aún no tienen un producto maestro asignado
+          const queryDetalles = `SELECT id, descripcion_original FROM \`${DATASET_ID}.Detalles_Compras\` WHERE compra_id = @compraId AND producto_maestro_id IS NULL`;
+          const [detalles] = await bigquery.query({ query: queryDetalles, params: { compraId: compra.id } });
+  
+          for (const detalle of detalles) {
+            if (detalle.descripcion_original) {
+              const queryPredict = `
+                SELECT predicted_producto_maestro_id as producto_sugerido
+                FROM ML.PREDICT(MODEL \`${DATASET_ID}.product_classifier\`, (SELECT @desc as descripcion_original))`;
+              
+              const [predictionResult] = await bigquery.query({
+                query: queryPredict,
+                params: { desc: detalle.descripcion_original }
+              });
+  
+              if (predictionResult.length > 0 && predictionResult[0].producto_sugerido) {
+                const sugerencia = predictionResult[0].producto_sugerido;
+                const queryUpdateDetalle = `UPDATE \`${DATASET_ID}.Detalles_Compras\` SET producto_maestro_id = @sugerencia WHERE id = @detalleId`;
+                await bigquery.query({
+                  query: queryUpdateDetalle,
+                  params: { sugerencia: sugerencia, detalleId: detalle.id }
+                });
+              }
+            }
+          }
+          
+          const queryUpdateCompra = `UPDATE \`${DATASET_ID}.Compras\` SET estado_ml = 'PROCESADO' WHERE id = @compraId`;
+          await bigquery.query({ query: queryUpdateCompra, params: { compraId: compra.id } });
+          procesadasConExito++;
+  
+        } catch (error) {
+          console.error(`Error procesando la compra ${compra.id}:`, error);
+          const queryUpdateCompraError = `UPDATE \`${DATASET_ID}.Compras\` SET estado_ml = 'ERROR' WHERE id = @compraId`;
+          await bigquery.query({ query: queryUpdateCompraError, params: { compraId: compra.id } });
+          procesadasConError++;
+        }
+      }
+  
+      sendSuccess(res, {
+        message: 'Procesamiento por lotes completado.',
+        total_procesadas: procesadasConExito,
+        total_con_error: procesadasConError
+      });
+  
+    } catch (error) {
+      console.error('Error fatal en el procesamiento por lotes:', error);
+      sendError(res, 'Error crítico durante el procesamiento por lotes.');
+    }
+});
+
 /** COMPRAS */
 // CREATE
 app.post('/api/compras', async (req, res) => {
@@ -144,39 +245,39 @@ app.post('/api/compras', async (req, res) => {
   }
   try {
     const compraId = uuidv4();
-    const monto_total = detalles.reduce((sum, item) => {
-      return sum + ((parseFloat(item.cantidad)||0) * (parseFloat(item.precio_neto_unitario)||0));
-    }, 0);
-
+    const monto_total = detalles.reduce((sum, item) => sum + ((parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_neto_unitario) || 0)), 0);
     const now = new Date();
-    const formattedDateTime = now.toISOString().slice(0,19).replace('T',' ');
+    const formattedDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
 
     const nuevaCompra = {
       id: compraId,
       proveedor_id,
-      folio: folio||null,
-      fecha_emision: fecha_emision||null,
-      centro_de_costos: centro_de_costos||null,
+      folio: folio || null,
+      fecha_emision: fecha_emision || null,
+      centro_de_costos: centro_de_costos || null,
       monto_total,
-      created_at: formattedDateTime
+      created_at: formattedDateTime,
+      estado_ml: 'PENDIENTE'
     };
 
     const detallesParaInsertar = detalles.map(item => ({
       id: uuidv4(),
       compra_id: compraId,
       descripcion_original: item.descripcion_original,
-      producto_maestro_id: item.producto_maestro_id||null,
+      producto_maestro_id: item.producto_maestro_id || null,
       cantidad: parseFloat(item.cantidad),
       precio_neto_unitario: parseFloat(item.precio_neto_unitario),
-      total_neto_linea: (parseFloat(item.cantidad)||0)*(parseFloat(item.precio_neto_unitario)||0)
+      total_neto_linea: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_neto_unitario) || 0)
     }));
 
     await bigquery.dataset(DATASET_ID).table('Compras').insert([nuevaCompra]);
-    await bigquery.dataset(DATASET_ID).table('Detalles_Compras').insert(detallesParaInsertar);
+    if (detallesParaInsertar.length > 0) {
+      await bigquery.dataset(DATASET_ID).table('Detalles_Compras').insert(detallesParaInsertar);
+    }
 
     sendSuccess(res, { ...nuevaCompra, detalles: detallesParaInsertar }, 201);
   } catch (error) {
-    console.error(error);
+    console.error("Error al crear la compra:", error);
     sendError(res, 'Error interno creando compra');
   }
 });
@@ -184,11 +285,26 @@ app.post('/api/compras', async (req, res) => {
 // READ ALL
 app.get('/api/compras', async (req, res) => {
   try {
-    const query = `SELECT * FROM \`${DATASET_ID}.Compras\``;
+    // MODIFICACIÓN: Usamos un JOIN para traer el nombre del proveedor
+    const query = `
+      SELECT 
+        c.id, 
+        c.folio, 
+        c.monto_total, 
+        c.created_at, 
+        c.estado_ml,
+        p.razon_social AS proveedor_nombre -- Creamos un alias para el nombre del proveedor
+      FROM 
+        \`${DATASET_ID}.Compras\` AS c
+      LEFT JOIN 
+        \`${DATASET_ID}.Proveedor\` AS p ON c.proveedor_id = p.id
+      ORDER BY 
+        c.created_at DESC
+    `;
     const [rows] = await bigquery.query(query);
     sendSuccess(res, rows);
   } catch (error) {
-    console.error(error);
+    console.error("Error al obtener las compras:", error);
     sendError(res, 'Error interno leyendo compras');
   }
 });

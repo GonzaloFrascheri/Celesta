@@ -24,10 +24,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    env_file:
-      - .env
     ports:
-      - "3001:3001"
+      - "3001:8080"
+    volumes:
+      # Montamos el archivo de credenciales que creaste en .gcp/
+      - ./.gcp/service-account-key.json:/app/service-account-key.json
     environment:
-      - FIREBASE_SERVICE_ACCOUNT_KEY_BASE64=${FIREBASE_SERVICE_ACCOUNT_KEY_BASE64}
+      # Le decimos a Google dónde encontrar las credenciales dentro del contenedor
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/service-account-key.json
+      # Y seguimos pasando el ID del dataset que se leerá desde tu archivo .env
       - BIGQUERY_DATASET_ID=${BIGQUERY_DATASET_ID}

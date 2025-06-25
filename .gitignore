@@ -7,6 +7,9 @@ node_modules
 .pnp
 .pnp.*
 
+# Carpeta con la clave de servicio
+.gcp/
+
 # Archivos de entorno - NUNCA SUBIR A GIT
 .env
 .env.*

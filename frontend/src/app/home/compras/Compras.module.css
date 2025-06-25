@@ -1,62 +1,150 @@
 /* frontend/app/home/compras/Compras.module.css */
+
 .container {
   padding: 2rem;
-  background-color: #fff;
+  background-color: #ffffff;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  max-width: 1200px;
+  margin: 2rem auto;
 }
 
 .title {
-  font-size: 1.8rem;
-  margin-bottom: 1.5rem;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-.table th, .table td {
-  padding: 0.8rem 1rem;
-  border-bottom: 1px solid #eaeaea;
-  text-align: left;
-}
-
-.table th {
-  font-weight: 600;
-  background-color: #f9f9f9;
-}
-
-.loader, .error {
-  text-align: center;
-  padding: 2rem;
-  font-size: 1.2rem;
-  color: #555;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.newButton,
+.processButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
 }
 
 .newButton {
-  background-color: #3b82f6; /* Un azul vibrante */
+  background-color: #3b82f6; /* Azul primario */
   color: white;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  text-decoration: none;
-  font-weight: 500;
-  transition: background-color 0.2s;
 }
 
 .newButton:hover {
-  background-color: #2563eb; /* Un azul un poco más oscuro al pasar el mouse */
+  background-color: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Añadir estas clases a Compras.module.css */
+.processButton {
+  background-color: #10b981; /* Verde para acción positiva */
+  color: white;
+}
+
+.processButton:hover {
+  background-color: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.processButton.disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table th,
+.table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  font-weight: 600;
+  background-color: #f9fafb;
+  color: #374151;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table td {
+  color: #4b5563;
+}
+
+.table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.loader,
+.error {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.2rem;
+  color: #6b7280;
+}
+
+.error {
+  color: #ef4444;
+}
+
+/* --- ESTILOS PARA LOS ESTADOS DE ML --- */
+.status {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.status.pendiente {
+  background-color: #fef3c7; /* Amarillo claro */
+  color: #92400e;
+}
+
+.status.procesado {
+  background-color: #d1fae5; /* Verde claro */
+  color: #065f46;
+}
+
+.status.error {
+  background-color: #fee2e2; /* Rojo claro */
+  color: #991b1b;
+}
+
+/* --- ESTILOS PARA FORMULARIOS (usados en la página de nueva compra) --- */
 
 .form {
   display: grid;
@@ -79,51 +167,74 @@
   margin-bottom: 0.5rem;
 }
 
-.input, .select {
+.input,
+.select {
   padding: 0.75rem;
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 1rem;
+  background-color: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .detailRow {
-  display: grid;
-  grid-template-columns: 3fr 1fr 1fr 1fr;
+  display: flex;
   gap: 1rem;
   align-items: center;
   margin-bottom: 1rem;
 }
 
-.removeButton, .addButton {
+.removeButton,
+.addButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 40px;
   padding: 0.5rem;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
+  transition: background-color 0.2s;
 }
 
 .removeButton {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+.removeButton:hover {
   background-color: #fecaca;
-  color: #991b1b;
 }
 
 .addButton {
-  background-color: #dbeafe;
-  color: #1e40af;
-  margin-top: 1rem;
+  background-color: #e0e7ff;
+  color: #3730a3;
+  width: auto;
+  padding: 0.6rem 1rem;
+}
+.addButton:hover {
+  background-color: #c7d2fe;
 }
 
 .submitButton {
-    background-color: #2563eb;
-    color: white;
-    padding: 0.8rem 1.5rem;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 500;
-    transition: background-color 0.2s;
-    border: none;
-    cursor: pointer;
-    margin-top: 1.5rem;
-    grid-column: 1 / -1;
-    justify-self: end;
+  background-color: #2563eb;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  border: none;
+  cursor: pointer;
+  margin-top: 1.5rem;
+  grid-column: 1 / -1;
+  justify-self: end;
 }
