@@ -37,8 +37,12 @@ app.use(express.json());
 const PORT = process.env.PORT || 8080;
 
 // --- Inicializa Firebase Admin ---
+console.log("--- [Punto 8] Intentando inicializar Firebase Admin SDK... ---");
+
+// --- Inicializa Firebase Admin ---
 admin.initializeApp();
 const db = admin.firestore();
+console.log("--- ✅ Firebase Admin SDK inicializado con éxito ---"); // Añadí un log para confirmar
 
 // --- Inicializa BigQuery (Versión CORREGIDA) ---
 console.log("--- [Punto 6] Intentando inicializar BigQuery... ---");

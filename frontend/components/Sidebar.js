@@ -26,6 +26,11 @@ export default function Sidebar({ onLinkClick }) {
           </Link>
         </li>
         <li>
+          <Link href="/home/clientes/nuevo" className={styles.navLink} onClick={onLinkClick}>
+            Clientes
+          </Link>
+        </li>
+        <li>
           <Link href="/home/proveedores" className={styles.navLink} onClick={onLinkClick}>
             Proveedores
           </Link>
