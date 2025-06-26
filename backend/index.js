@@ -96,22 +96,24 @@ const clientes = db.collection('clientes');
 
 app.post('/api/clientes', async (req, res) => {
   try {
-    const { nombre, rut, email, telefono } = req.body;
-    if (!nombre || !rut) return sendError(res, 'nombre y rut requeridos', 400);
-
-    const nuevo = {
-      id: uuidv4(),
-      nombre,
-      rut,
-      email: email || null,
-      telefono: telefono || null,
-      created_at: admin.firestore.FieldValue.serverTimestamp()
+    // CORRECCIÓN: Leemos los campos que coinciden con el modelo de datos de Firestore
+    const { nombre, email, rol } = req.body;
+    if (!nombre || !email) return sendError(res, 'nombre y email son requeridos', 400);
+    
+    const nuevoId = uuidv4();
+    const nuevo = { 
+      id: nuevoId, 
+      nombre, 
+      email, 
+      rol: rol || 'usuario', // Asignamos un rol por defecto si no se especifica
+      created_at: admin.firestore.FieldValue.serverTimestamp() 
     };
 
-    await clientes.doc(nuevo.id).set(nuevo);
+    // Usamos el ID generado por nosotros para el nombre del documento
+    await clientes.doc(nuevoId).set(nuevo);
     sendSuccess(res, nuevo, 201);
   } catch (e) {
-    console.error(e);
+    console.error('Error creando cliente en Firestore:', e);
     sendError(res, 'Error interno creando cliente');
   }
 });
