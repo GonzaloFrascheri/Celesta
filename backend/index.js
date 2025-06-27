@@ -40,7 +40,10 @@ const PORT = process.env.PORT || 8080;
 console.log("--- [Punto 8] Intentando inicializar Firebase Admin SDK... ---");
 
 // --- Inicializa Firebase Admin ---
-admin.initializeApp();
+admin.initializeApp({
+  credential: admin.credential.applicationDefault(),
+  projectId: 'celesta-poc-8d755',
+});
 const db = admin.firestore();
 console.log("--- ✅ Firebase Admin SDK inicializado con éxito ---"); // Añadí un log para confirmar
 
