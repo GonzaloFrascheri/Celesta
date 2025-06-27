@@ -337,17 +337,18 @@ app.post('/api/compras', async (req, res) => {
     if (precioNuevo > precioPromedio) {
       alertaId = uuidv4();
       await bigquery
-        .dataset(DATASET_ID)
-        .table('Alertas')
-        .insert([{
-          id:                  alertaId,
-          producto_maestro_id: productoId,
-          compra_id:           compraId,
-          precio_nuevo:        precioNuevo,
-          precio_promedio:     precioPromedio,
-          diferencia:          precioNuevo - precioPromedio,
-          created_at:          now
-        }]);
+      .dataset(DATASET_ID)
+      .table('Alertas')
+      .insert([{
+        id:                  alertaId,
+        producto_maestro_id: productoId,
+        compra_id:           compraId,
+        precio_nuevo:        precioNuevo,
+        precio_promedio:     precioPromedio,
+        diferencia:          precioNuevo - precioPromedio,
+        created_at:          now,
+        leida:               false
+      }]);
     }
 
     // 5) Devuelvo la respuesta incluyendo info de alerta
@@ -395,17 +396,39 @@ app.get('/api/precios-historico/:productoId', async (req, res) => {
 // Lista las alertas creadas en BigQuery
 app.get('/api/alertas', async (req, res) => {
   try {
-    const sqlAlerts = `
+    // lee el parámetro: por defecto 'false' → sólo pendientes
+    const leidaParam = (req.query.leida === 'true');
+    const sql = `
       SELECT *
       FROM \`celesta-poc.${DATASET_ID}.Alertas\`
+      WHERE leida = @leida
       ORDER BY created_at DESC
       LIMIT 100
     `;
-    const [rows] = await bigquery.query({ query: sqlAlerts });
+    const [rows] = await bigquery.query({
+      query: sql,
+      params: { leida: leidaParam }
+    });
     return sendSuccess(res, rows);
   } catch (e) {
     console.error('Error leyendo alertas:', e);
     return sendError(res, 'Error interno leyendo alertas');
+  }
+});
+
+// 3) PUT /api/alertas/:id/leida → actualiza el flag en vez de borrar
+app.put('/api/alertas/:id/leida', async (req, res) => {
+  try {
+    const sql = `
+      UPDATE \`celesta-poc.${DATASET_ID}.Alertas\`
+      SET leida = TRUE
+      WHERE id = @id
+    `;
+    await bigquery.query({ query: sql, params: { id: req.params.id } });
+    return res.status(204).send();
+  } catch (e) {
+    console.error('Error marcando alerta leída:', e);
+    return sendError(res, 'Error interno marcando alerta leída');
   }
 });
 

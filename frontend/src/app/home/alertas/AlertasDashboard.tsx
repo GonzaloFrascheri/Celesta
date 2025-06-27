@@ -101,10 +101,34 @@ export default function AlertasDashboard() {
       <h2>Métricas de Alertas</h2>
       <div className={styles.dashboardCharts}>
         <div className={styles.chartContainer}>
-          <Line data={lineData} />
+          <Line
+            data={lineData}
+            options={{
+              plugins: {
+                title: { display: true, text: 'Evolución diaria de alertas' },
+                legend: { position: 'top' }
+              },
+              scales: {
+                x: { title: { display: true, text: 'Día' } },
+                y: { title: { display: true, text: 'Cantidad de alertas' }, beginAtZero: true }
+              }
+            }}
+          />
         </div>
         <div className={styles.chartContainer}>
-          <Bar data={barData} />
+          <Bar
+            data={barData}
+            options={{
+              plugins: {
+                title: { display: true, text: 'Top 5 productos por alertas' },
+                legend: { position: 'top' }
+              },
+              scales: {
+                x: { title: { display: true, text: 'Producto Maestro' } },
+                y: { title: { display: true, text: 'Total de alertas' }, beginAtZero: true }
+              }
+            }}
+          />
         </div>
       </div>
     </div>
