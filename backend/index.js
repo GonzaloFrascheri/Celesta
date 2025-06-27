@@ -54,7 +54,10 @@ if (!DATASET_ID) {
   console.error('❌ BIGQUERY_DATASET_ID no definido');
   process.exit(1);
 }
-const bigquery = new BigQuery();
+const bigquery = new BigQuery({
+  projectId: 'celesta-poc',
+  location:  'US'
+});
 console.log("--- [Punto 7] ✅ BigQuery inicializado con éxito ---");
 
 // --- Helpers ---
@@ -246,46 +249,132 @@ app.post('/api/procesar-compras-pendientes', async (req, res) => {
 /** COMPRAS */
 // CREATE
 app.post('/api/compras', async (req, res) => {
-  const { proveedor_id, folio, fecha_emision, centro_de_costos, detalles } = req.body;
-  if (!proveedor_id || !detalles || !Array.isArray(detalles) || detalles.length === 0) {
-    return sendError(res, 'Se requiere un proveedor_id y un array de detalles', 400);
+  const { proveedor_id, detalles } = req.body;
+  if (!proveedor_id || !Array.isArray(detalles) || detalles.length === 0) {
+    return sendError(res, 'Se requiere proveedor_id y detalles', 400);
   }
+
   try {
+    // 1) Inserto la compra
     const compraId = uuidv4();
-    const monto_total = detalles.reduce((sum, item) => sum + ((parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_neto_unitario) || 0)), 0);
-    const now = new Date();
-    const formattedDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
-
+    const now = new Date().toISOString().slice(0,19).replace('T',' ');
+    const montoTotal = detalles.reduce((sum, d) =>
+      sum + (d.cantidad * d.precio_neto_unitario), 0
+    );
     const nuevaCompra = {
-      id: compraId,
-      proveedor_id,
-      folio: folio || null,
-      fecha_emision: fecha_emision || null,
-      centro_de_costos: centro_de_costos || null,
-      monto_total,
-      created_at: formattedDateTime,
-      estado_ml: 'PENDIENTE'
+      id:           compraId,
+      proveedor_id: proveedor_id,
+      created_at:   now,
+      monto_total:  montoTotal,
+      estado_ml:    'PENDIENTE'
     };
+    await bigquery
+      .dataset(DATASET_ID)
+      .table('Compras')
+      .insert([nuevaCompra]);
 
-    const detallesParaInsertar = detalles.map(item => ({
-      id: uuidv4(),
-      compra_id: compraId,
-      descripcion_original: item.descripcion_original,
-      producto_maestro_id: item.producto_maestro_id || null,
-      cantidad: parseFloat(item.cantidad),
-      precio_neto_unitario: parseFloat(item.precio_neto_unitario),
-      total_neto_linea: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_neto_unitario) || 0)
+    // 2) Inserto los detalles
+    const detallesParaInsertar = detalles.map(d => ({
+      id:                   uuidv4(),
+      compra_id:            compraId,
+      producto_maestro_id:  d.producto_maestro_id || null,
+      cantidad:             parseFloat(d.cantidad),
+      precio_neto_unitario: parseFloat(d.precio_neto_unitario)
     }));
+    await bigquery
+      .dataset(DATASET_ID)
+      .table('Detalles_Compras')
+      .insert(detallesParaInsertar);
 
-    await bigquery.dataset(DATASET_ID).table('Compras').insert([nuevaCompra]);
-    if (detallesParaInsertar.length > 0) {
-      await bigquery.dataset(DATASET_ID).table('Detalles_Compras').insert(detallesParaInsertar);
+    // 3) Traigo el promedio 90 días desde la VIEW
+    const productoId = detallesParaInsertar[0].producto_maestro_id;
+    const precioNuevo = detallesParaInsertar[0].precio_neto_unitario;
+    const sqlView = `
+      SELECT precio_promedio
+      FROM \`celesta-poc.${DATASET_ID}.Precio_Promedio_90d\`
+      WHERE producto_maestro_id = @productoId
+      LIMIT 1
+    `;
+    const [viewRows] = await bigquery.query({
+      query: sqlView,
+      params: { productoId }
+    });
+    const precioPromedio = viewRows[0]?.precio_promedio || 0;
+
+    // 4) Si el precio nuevo > promedio → inserto alerta en BigQuery
+    let alertaId = null;
+    if (precioNuevo > precioPromedio) {
+      alertaId = uuidv4();
+      await bigquery
+        .dataset(DATASET_ID)
+        .table('Alertas')
+        .insert([{
+          id:                  alertaId,
+          producto_maestro_id: productoId,
+          compra_id:           compraId,
+          precio_nuevo:        precioNuevo,
+          precio_promedio:     precioPromedio,
+          diferencia:          precioNuevo - precioPromedio,
+          created_at:          now
+        }]);
     }
 
-    sendSuccess(res, { ...nuevaCompra, detalles: detallesParaInsertar }, 201);
-  } catch (error) {
-    console.error("Error al crear la compra:", error);
-    sendError(res, 'Error interno creando compra');
+    // 5) Devuelvo la respuesta incluyendo info de alerta
+    return sendSuccess(res, {
+      ...nuevaCompra,
+      detalles:            detallesParaInsertar,
+      precio_promedio_90d: precioPromedio,
+      alerta_generada:     precioNuevo > precioPromedio,
+      alerta_id:           alertaId
+    }, 201);
+
+  } catch (e) {
+    console.error('Error creando compra con alerta:', e);
+    return sendError(res, 'Error interno creando compra');
+  }
+});
+
+// GET /api/precios-historico/:productoId
+// Devuelve todos los precios registrados para un producto, ordenados por fecha
+app.get('/api/precios-historico/:productoId', async (req, res) => {
+  try {
+    const { productoId } = req.params;
+    const sqlHist = `
+      SELECT
+        PARSE_DATETIME('%Y-%m-%d %H:%M:%S', c.created_at) AS fecha,
+        d.precio_neto_unitario AS precio
+      FROM \`celesta-poc.${DATASET_ID}.Detalles_Compras\` AS d
+      JOIN \`celesta-poc.${DATASET_ID}.Compras\`        AS c
+        ON d.compra_id = c.id
+      WHERE d.producto_maestro_id = @productoId
+      ORDER BY fecha
+    `;
+    const [rows] = await bigquery.query({
+      query: sqlHist,
+      params: { productoId }
+    });
+    return sendSuccess(res, rows);
+  } catch (e) {
+    console.error('Error histórico de precios:', e);
+    return sendError(res, 'Error interno obteniendo histórico');
+  }
+});
+
+// GET /api/alertas
+// Lista las alertas creadas en BigQuery
+app.get('/api/alertas', async (req, res) => {
+  try {
+    const sqlAlerts = `
+      SELECT *
+      FROM \`celesta-poc.${DATASET_ID}.Alertas\`
+      ORDER BY created_at DESC
+      LIMIT 100
+    `;
+    const [rows] = await bigquery.query({ query: sqlAlerts });
+    return sendSuccess(res, rows);
+  } catch (e) {
+    console.error('Error leyendo alertas:', e);
+    return sendError(res, 'Error interno leyendo alertas');
   }
 });
 
