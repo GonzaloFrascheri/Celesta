@@ -34,7 +34,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-/* andando
 const PORT = process.env.PORT || 8080;
 
 // --- Inicializa Firebase Admin ---
@@ -54,35 +53,6 @@ if (!DATASET_ID) {
 }
 const bigquery = new BigQuery();
 console.log("--- [Punto 7] ✅ BigQuery inicializado con éxito ---");
-*/
-
-const PORT = process.env.PORT || 8080;
-
-// --- INICIALIZACIÓN DE SERVICIOS (VERSIÓN EXPLÍCITA FINAL) ---
-
-// Obtenemos el ID del proyecto desde la variable de entorno que pasamos en Cloud Build
-const GCLOUD_PROJECT_ID = process.env.GCLOUD_PROJECT;
-if (!GCLOUD_PROJECT_ID) {
-  console.error('❌ La variable de entorno GCLOUD_PROJECT no está definida.');
-  process.exit(1);
-}
-
-// Inicializamos Firebase Admin, pasándole explícitamente el ID del proyecto
-admin.initializeApp({
-  projectId: GCLOUD_PROJECT_ID,
-});
-const db = admin.firestore();
-
-// Inicializamos BigQuery, pasándole también el ID del proyecto
-const bigquery = new BigQuery({
-  projectId: GCLOUD_PROJECT_ID,
-});
-
-const DATASET_ID = process.env.BIGQUERY_DATASET_ID;
-if (!DATASET_ID) {
-  console.error('❌ BIGQUERY_DATASET_ID no definido');
-  process.exit(1);
-}
 
 // --- Helpers ---
 const sendSuccess = (res, data, code = 200) => res.status(code).json({ success: true, data });
