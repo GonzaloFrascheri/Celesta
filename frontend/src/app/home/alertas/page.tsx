@@ -1,62 +1,51 @@
-'use client'
+// src/app/home/alertas/page.tsx
+'use client';
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useState, useEffect } from 'react';
+import AlertCard from './AlertCard';
+import styles from './Alertas.module.css';
+import AlertasDashboard from './AlertasDashboard';
 
 export default function AlertasPage() {
-  const [alertas, setAlertas] = useState<
-    { id: string; producto_maestro_id: string; precio_nuevo: number;
-      precio_promedio: number; diferencia: number; created_at: string }[]
-  >([])
+  const [alertas, setAlertas] = useState<any[]>([]);
+  const API = process.env.NEXT_PUBLIC_API_URL!;
 
   useEffect(() => {
-    fetch('/api/alertas')
+    fetch(`${API}/alertas`)
       .then(r => r.json())
       .then(j => j.success && setAlertas(j.data))
-      .catch(console.error)
-  }, [])
+      .catch(console.error);
+  }, [API]);
 
   const markAsRead = async (id: string) => {
-    await fetch(`/api/alertas/${id}/leida`, { method: 'PUT' })
-    setAlertas(alertas.filter(a => a.id !== id))
-  }
+    await fetch(`${API}/alertas/${id}/leida`, { method: 'PUT' });
+    setAlertas(a => a.filter(x => x.id !== id));
+  };
 
   return (
-    <div style={{ padding: 16 }}>
+    <div style={{ padding: '1rem' }}>
       <h1>Alertas Pendientes</h1>
+      <AlertasDashboard />
+
       {alertas.length === 0
         ? <p>No hay alertas por el momento.</p>
         : (
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className={styles.list}>
             {alertas.map(a => (
-              <li key={a.id} style={{
-                border: '1px solid #ddd',
-                borderRadius: 4,
-                padding: 12,
-                marginBottom: 12,
-                display: 'flex',
-                justifyContent: 'space-between'
-              }}>
-                <div>
-                  <p><strong>Producto:</strong> {a.producto_maestro_id}</p>
-                  <p><strong>Precio nuevo:</strong> ${a.precio_nuevo.toFixed(2)}</p>
-                  <p><strong>Promedio 90d:</strong> ${a.precio_promedio.toFixed(2)}</p>
-                  <p><strong>Diferencia:</strong> ${a.diferencia.toFixed(2)}</p>
-                  <p style={{ fontSize: 12, color: '#666' }}>
-                    {new Date(a.created_at).toLocaleString()}
-                  </p>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <Link href={`/home/alertas/${a.id}`}>
-                    <button>Ver histórico</button>
-                  </Link>
-                  <button onClick={() => markAsRead(a.id)}>Marcar leído</button>
-                </div>
-              </li>
+              <AlertCard
+                key={a.id}
+                id={a.id}
+                producto={a.producto_maestro_id}
+                precioNuevo={a.precio_nuevo}
+                precioPromedio={a.precio_promedio}
+                diferencia={a.diferencia}
+                createdAt={a.created_at}
+                onMarkRead={markAsRead}
+              />
             ))}
           </ul>
         )
       }
     </div>
-  )
+  );
 }

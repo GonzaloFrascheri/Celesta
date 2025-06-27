@@ -101,6 +101,37 @@ app.post('/api/sugerir-producto', async (req, res) => {
   }
 });
 
+// GET /api/alertas/metrics/diarias
+app.get('/api/alertas/metrics/diarias', async (_, res) => {
+  try {
+    const sql = `
+      SELECT dia, total_alertas, promedio_diferencia
+      FROM \`celesta-poc.${DATASET_ID}.Alertas_Por_Dia\`
+      ORDER BY dia
+    `;
+    const [rows] = await bigquery.query({ query: sql });
+    sendSuccess(res, rows);
+  } catch (e) {
+    console.error('Error metrics diarias:', e);
+    sendError(res, 'Error interno obteniendo métricas diarias');
+  }
+});
+
+// GET /api/alertas/metrics/productos
+app.get('/api/alertas/metrics/productos', async (_, res) => {
+  try {
+    const sql = `
+      SELECT producto_maestro_id, total_alertas
+      FROM \`celesta-poc.${DATASET_ID}.Alertas_Por_Producto\`
+    `;
+    const [rows] = await bigquery.query({ query: sql });
+    sendSuccess(res, rows);
+  } catch (e) {
+    console.error('Error metrics productos:', e);
+    sendError(res, 'Error interno obteniendo métricas por producto');
+  }
+});
+
 // --- RUTAS DE CLIENTES (Firestore) ---
 const clientes = db.collection('clientes');
 

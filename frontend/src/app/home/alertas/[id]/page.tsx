@@ -1,48 +1,41 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
-import Link from 'next/link'
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
 
-// Cargamos el Line chart sólo en cliente
-const Line = dynamic(
-  () => import('react-chartjs-2').then(mod => mod.Line),
-  { ssr: false }
-)
+const Line = dynamic(() => import('react-chartjs-2').then(m => m.Line), { ssr: false });
 
 export default function AlertaDetail() {
-  const { id } = useParams()                // viene de /home/alertas/[id]
-  const router = useRouter()
-  const [alerta, setAlerta] = useState<any>(null)
-  const [history, setHistory] = useState<{ fecha: string, precio: number }[]>([])
+  const { id } = useParams();
+  const router = useRouter();
+  const [alerta, setAlerta] = useState<any>(null);
+  const [history, setHistory] = useState<{ fecha: string, precio: number }[]>([]);
 
-  // Cargo la alerta (para obtener producto_maestro_id)
   useEffect(() => {
-    fetch('/api/alertas')
+    const API = process.env.NEXT_PUBLIC_API_URL;
+    fetch(`${API}/alertas`)
       .then(r => r.json())
       .then(j => {
         if (j.success) {
-          const found = j.data.find((a: any) => a.id === id)
-          setAlerta(found)
+          const found = j.data.find((a: any) => a.id === id);
+          setAlerta(found);
         }
-      })
-  }, [id])
+      });
+  }, [id]);
 
-  // Cargo el histórico cuando tengo la alerta
   useEffect(() => {
-    if (!alerta) return
-    fetch(`/api/precios-historico/${alerta.producto_maestro_id}`)
+    if (!alerta) return;
+    const API = process.env.NEXT_PUBLIC_API_URL;
+    fetch(`${API}/precios-historico/${alerta.producto_maestro_id}`)
       .then(r => r.json())
       .then(j => j.success && setHistory(j.data))
-      .catch(console.error)
-  }, [alerta])
+      .catch(console.error);
+  }, [alerta]);
 
-  if (!alerta) {
-    return <p>Cargando alerta…</p>
-  }
+  if (!alerta) return <p>Cargando alerta…</p>;
 
-  // Preparo datos para Chart.js
   const data = {
     labels: history.map(h => new Date(h.fecha).toLocaleDateString()),
     datasets: [{
@@ -51,7 +44,7 @@ export default function AlertaDetail() {
       fill: false,
       tension: 0.2
     }]
-  }
+  };
 
   return (
     <div style={{ padding: 16 }}>
@@ -69,10 +62,10 @@ export default function AlertaDetail() {
       </p>
 
       <h2 style={{ marginTop: 24 }}>Histórico de Precios</h2>
-      {history.length
+      {history.length > 0
         ? <Line data={data} />
         : <p>Cargando gráfico…</p>
       }
     </div>
-  )
+  );
 }

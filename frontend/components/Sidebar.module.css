@@ -26,15 +26,33 @@
   overflow-y: auto; /* Permite scroll si hay muchos ítems */
 }
 
+.navItemWithBadge {
+  position: relative;
+}
+
 .navLink {
   display: block;
-  padding: 1rem 1.5rem;
-  color: #a0aec0;
+  padding: 0.75rem 1rem;
+  color: #fff;
   text-decoration: none;
-  transition: background-color 0.2s, color 0.2s;
 }
 
 .navLink:hover {
   background-color: #2d3748;
   color: white;
+}
+
+.badge {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  background-color: #e00;
+  color: #fff;
+  border-radius: 50%;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  font-size: 12px;
+  text-align: center;
+  padding: 0 4px;
 }
