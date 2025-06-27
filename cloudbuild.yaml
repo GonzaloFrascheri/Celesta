@@ -67,8 +67,11 @@ steps:
     - --platform
     - managed
     - --allow-unauthenticated
-    - --remove-env-vars=BIGQUERY_DATASET_ID
-    - --set-secrets=FIREBASE_SERVICE_ACCOUNT_KEY_JSON=firebase-service-account-json:latest,BIGQUERY_DATASET_ID=bigquery-dataset-id:latest
+    # --- INICIO DE LA CORRECCIÓN ---
+    # Pasamos el ID del proyecto de Firebase como una variable de entorno
+    - --set-env-vars=GCLOUD_PROJECT=$_FIREBASE_PROJECT_ID,BIGQUERY_DATASET_ID=celesta_data
+    # Ya no necesitamos pasar secretos si la autenticación es automática
+    # --- FIN DE LA CORRECCIÓN ---
     waitFor: ['build-and-push-backend']
 
 options:
