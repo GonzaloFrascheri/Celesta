@@ -2,43 +2,36 @@
 "use client";
 
 import { useState } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import Sidebar from '../../../components/Sidebar';
+import Topbar from '../../../components/Topbar';
 import styles from './HomeLayout.module.css';
-import { FaBars, FaTimes } from 'react-icons/fa';
 
 export default function HomeLayout({ children }) {
+  const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // ==========================================================
-  // ¡NUEVA FUNCIÓN! Esta función se encargará de cerrar el menú.
-  // ==========================================================
   const handleSidebarClose = () => {
-    setIsSidebarOpen(false);
+    if (isSidebarOpen) {
+      setIsSidebarOpen(false);
+    }
   };
+
+  if (!user) {
+    return <div className={styles.fullScreenLoader}>Cargando...</div>;
+  }
 
   return (
     <div className={styles.layoutContainer}>
       <div className={`${styles.sidebarWrapper} ${isSidebarOpen ? styles.sidebarOpen : ''}`}>
-        {/* ==========================================================
-          ¡CAMBIO CLAVE! Le pasamos la función al Sidebar como prop.
-          ==========================================================
-        */}
         <Sidebar onLinkClick={handleSidebarClose} />
       </div>
 
       <div className={styles.mainContent}>
-        <header className={styles.mobileHeader}>
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-            className={styles.menuButton}
-            aria-label="Toggle menu"
-          >
-            {isSidebarOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <div className={styles.mobileLogo}>Celesta</div>
-        </header>
+        {/* Le pasamos la función para que el Topbar pueda abrir/cerrar el menú */}
+        <Topbar onMenuButtonClick={() => setIsSidebarOpen(!isSidebarOpen)} />
         
-        <main>
+        <main className={styles.pageContent}>
           {children}
         </main>
       </div>

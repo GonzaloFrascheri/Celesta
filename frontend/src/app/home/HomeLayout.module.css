@@ -1,27 +1,100 @@
-/* frontend/src/app/home/HomeLayout.module.css (Corregido) */
-
+/* --- Contenedor Principal --- */
 .layoutContainer {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  background-color: #f9fafb;
 }
 
-/* El contenedor del sidebar en desktop */
+/* --- Barra Lateral (Sidebar) --- */
+/* Por defecto (desktop), el sidebar tiene un ancho fijo */
 .sidebarWrapper {
   width: 250px;
   flex-shrink: 0;
+  background-color: #ffffff;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+  z-index: 10;
+  transition: margin-left 0.3s ease-in-out;
 }
 
-/* El contenido principal ahora ocupará el espacio restante */
+/* --- Contenido Principal --- */
 .mainContent {
   flex-grow: 1;
-  background-color: #f4f7fa;
-  padding-left: 0;
-  /* Este padding-left es el truco para que en desktop no se superponga */
-  /* Lo eliminaremos en la vista móvil */
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
-.mobileHeader {
-  display: none; /* Oculto en desktop por defecto */
+/* --- Barra Superior (Topbar) --- */
+.topbar {
+  display: flex;
+  justify-content: space-between; /* Alinea el botón de menú a la izquierda y el resto a la derecha */
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  gap: 1.5rem;
+}
+
+/* Contenedor para los elementos de la derecha de la topbar */
+.topbarActions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* El botón del menú hamburguesa, oculto en desktop */
+.menuButton {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #374151;
+}
+
+.userInfo {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.userInfo strong {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.logoutButton {
+  display: inline-flex;
+  align-items: center;
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid #fecaca;
+  cursor: pointer;
+}
+
+.logoutButton:hover {
+  background-color: #fca5a5;
+  color: #7f1d1d;
+}
+
+/* Contenedor del contenido de la página */
+.pageContent {
+  padding: 2rem;
+}
+
+/* Loader de pantalla completa */
+.fullScreenLoader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-size: 1.5rem;
+    color: #6b7280;
 }
 
 /* --- VISTA MÓVIL (PANTALLAS DE 768px O MENOS) --- */
@@ -31,7 +104,6 @@
     position: fixed;
     left: -100%; /* Empieza fuera de la pantalla */
     top: 0;
-    width: 250px;
     height: 100%;
     z-index: 1000;
     transition: left 0.3s ease-in-out;
@@ -42,31 +114,27 @@
     left: 0;
   }
   
-  /* Hacemos que la cabecera móvil aparezca */
-  .mobileHeader {
-    display: flex;
-    align-items: center;
-    background-color: #fff;
-    padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-
+  /* Hacemos que el botón del menú aparezca */
   .menuButton {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    z-index: 1001;
+    display: block;
   }
 
-  .mobileLogo {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin: 0 auto; /* Centramos el logo */
-    transform: translateX(-1.25rem); /* Ajuste para compensar el botón de menú */
+  /* Ajustamos la barra superior para móvil */
+  .topbar {
+    padding: 1rem;
+    justify-content: space-between;
+  }
+
+  /* Opcional: Ocultar el email en móvil si ocupa mucho espacio */
+  .userInfo {
+    display: none;
   }
   
   .mainContent {
-      width: 100%;
+    width: 100%;
+  }
+
+  .pageContent {
+    padding: 1.5rem;
   }
 }

@@ -1,0 +1,62 @@
+/* frontend/src/app/components/Topbar.module.css */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 2rem;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    height: 65px;
+}
+
+.leftActions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.rightActions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* El botón del menú hamburguesa, oculto en desktop por defecto */
+.menuButton {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #374151;
+}
+
+/* El resto de los estilos (.iconButton, .separator, .userMenu, etc.) no cambian */
+.iconButton { position: relative; color: #6b7280; background: none; border: none; padding: 0.5rem; cursor: pointer; transition: color 0.2s; }
+.iconButton:hover { color: #1f2937; }
+.notificationBadge { position: absolute; top: 0.5rem; right: 0.5rem; width: 0.5rem; height: 0.5rem; border-radius: 9999px; background-color: #3b82f6; border: 2px solid white; }
+.separator { height: 2rem; width: 1px; background-color: #e5e7eb; }
+.userMenu { position: relative; }
+.userMenuButton { display: flex; align-items: center; gap: 0.75rem; background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: 6px; transition: background-color 0.2s; }
+.userMenuButton:hover { background-color: #f9fafb; }
+.userDetails { display: flex; flex-direction: column; align-items: flex-end; }
+.userName { font-weight: 600; font-size: 0.875rem; color: #111827; }
+.userRole { font-size: 0.75rem; color: #6b7280; }
+.avatar { width: 40px; height: 40px; border-radius: 9999px; background-color: #e5e7eb; color: #4b5563; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.dropdownMenu { position: absolute; right: 0; top: calc(100% + 0.5rem); width: 200px; background-color: white; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); z-index: 50; border: 1px solid #f3f4f6; padding: 0.5rem 0; }
+.dropdownItem { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background-color 0.2s; }
+.dropdownItem:hover { background-color: #f3f4f6; }
+.dropdownIcon { color: #9ca3af; }
+.dropdownDivider { height: 1px; background-color: #f3f4f6; margin: 0.5rem 0; }
+.logout { color: #ef4444; }
+.logout .dropdownIcon { color: #ef4444; }
+
+/* En pantallas pequeñas, mostramos el botón de menú */
+@media (max-width: 768px) {
+    .menuButton {
+        display: block;
+    }
+    .topbar {
+        padding: 0.75rem 1rem;
+    }
+}
