@@ -395,29 +395,29 @@ app.get('/api/precios-historico/:productoId', async (req, res) => {
 // GET /api/alertas
 // Lista las alertas creadas en BigQuery
 app.get('/api/alertas', async (req, res) => {
+  const leidaParam = req.query.leida === 'true';
+  // 🔥 Loguea DATASET_ID y la query
+  console.log('🔍 DATASET_ID en /api/alertas:', DATASET_ID);
+  const sql = `
+    SELECT
+      id,
+      producto_maestro_id,
+      precio_nuevo,
+      precio_promedio,
+      diferencia,
+      FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', created_at, 'America/Montevideo') AS created_at
+    FROM \`celesta-poc.${DATASET_ID}.Alertas\`
+    WHERE leida = @leida
+    ORDER BY created_at DESC
+    LIMIT 100
+  `;
+  console.log('🔍 SQL /api/alertas:', sql.trim());
+
   try {
-    // lee el parámetro: por defecto 'false' → sólo pendientes
-    const leidaParam = (req.query.leida === 'true');
-    const sql = `
-      SELECT 
-        id,
-        producto_maestro_id,
-        precio_nuevo,
-        precio_promedio,
-        diferencia,
-        FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', created_at, 'America/Montevideo') AS created_at
-      FROM \`celesta-poc.${DATASET_ID}.Alertas\`
-      WHERE leida = @leida
-      ORDER BY created_at DESC
-      LIMIT 100
-    `;
-    const [rows] = await bigquery.query({
-      query: sql,
-      params: { leida: leidaParam }
-    });
+    const [rows] = await bigquery.query({ query: sql, params: { leida: leidaParam } });
     return sendSuccess(res, rows);
   } catch (e) {
-    console.error('Error leyendo alertas:', e);
+    console.error('❌ Error en /api/alertas:', e);
     return sendError(res, 'Error interno leyendo alertas');
   }
 });
