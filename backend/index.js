@@ -405,13 +405,16 @@ app.get('/api/alertas', async (req, res) => {
       precio_nuevo,
       precio_promedio,
       diferencia,
-      FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', created_at, 'America/Montevideo') AS created_at
+      FORMAT_TIMESTAMP(
+       '%Y-%m-%d %H:%M:%S',
+       TIMESTAMP(created_at, 'UTC'),
+       'America/Montevideo'
+     ) AS created_at
     FROM \`celesta-poc.${DATASET_ID}.Alertas\`
     WHERE leida = @leida
     ORDER BY created_at DESC
     LIMIT 100
   `;
-  console.log('🔍 SQL /api/alertas:', sql.trim());
 
   try {
     const [rows] = await bigquery.query({ query: sql, params: { leida: leidaParam } });
@@ -447,7 +450,11 @@ app.get('/api/alertas/:id', async (req, res) => {
         precio_nuevo,
         precio_promedio,
         diferencia,
-        FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', created_at, 'America/Montevideo') AS created_at
+        FORMAT_TIMESTAMP(
+         '%Y-%m-%d %H:%M:%S',
+         TIMESTAMP(created_at, 'UTC'),
+         'America/Montevideo'
+       ) AS created_at
       FROM \`celesta-poc.${DATASET_ID}.Alertas\`
       WHERE id = @id
       LIMIT 1
