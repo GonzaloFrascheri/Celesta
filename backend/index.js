@@ -372,15 +372,15 @@ app.get('/api/precios-historico/:productoId', async (req, res) => {
   try {
     const { productoId } = req.params;
     const sqlHist = `
-      SELECT
-        PARSE_DATETIME('%Y-%m-%d %H:%M:%S', c.created_at) AS fecha,
-        d.precio_neto_unitario AS precio
-      FROM \`celesta-poc.${DATASET_ID}.Detalles_Compras\` AS d
-      JOIN \`celesta-poc.${DATASET_ID}.Compras\`        AS c
-        ON d.compra_id = c.id
-      WHERE d.producto_maestro_id = @productoId
-      ORDER BY fecha
-    `;
+     SELECT
+       c.created_at AS fecha,
+       d.precio_neto_unitario AS precio
+     FROM \`celesta-poc.${DATASET_ID}.Detalles_Compras\` AS d
+     JOIN \`celesta-poc.${DATASET_ID}.Compras\`        AS c
+       ON d.compra_id = c.id
+     WHERE d.producto_maestro_id = @productoId
+     ORDER BY fecha
+   `;
     const [rows] = await bigquery.query({
       query: sqlHist,
       params: { productoId }

@@ -36,6 +36,26 @@ const Line = dynamic(() => import('react-chartjs-2').then(m => m.Line), {
   ssr: false
 });
 
+// helper robusto para parsear fechas de distintos formatos
+function parseDate(val: any): Date {
+  if (val instanceof Date) return val;
+  if (typeof val === 'string') {
+    const iso = val.includes(' ') ? val.replace(' ', 'T') : val;
+    return new Date(iso);
+  }
+  if (val && typeof val === 'object') {
+    if ('value' in val && typeof val.value === 'string') {
+      const iso = val.value.includes(' ') ? val.value.replace(' ', 'T') : val.value;
+      return new Date(iso);
+    }
+    if ('seconds' in val && typeof val.seconds === 'number') {
+      return new Date(val.seconds * 1000);
+    }
+  }
+  // fallback genérico
+  return new Date(String(val));
+}
+
 export default function AlertaDetail() {
   const { id } = useParams();
   const router = useRouter();
@@ -44,7 +64,7 @@ export default function AlertaDetail() {
     precio_nuevo: number;
     precio_promedio: number;
     diferencia: number;
-    created_at: string;
+    created_at: any;
   } | null>(null);
   const [history, setHistory] = useState<{ fecha: string; precio: number }[]>([]);
 
@@ -77,8 +97,8 @@ export default function AlertaDetail() {
     return <p style={{ padding: 16, color: 'red' }}>Alerta no encontrada.</p>;
   }
 
-  // 4) Formateo la fecha
-  const fechaObj = new Date(alerta.created_at.replace(' ', 'T'));
+  // 4) Formateo la fecha usando parseDate
+  const fechaObj = parseDate(alerta.created_at);
   const fechaStr = isNaN(fechaObj.getTime())
     ? '—'
     : fechaObj.toLocaleString();
