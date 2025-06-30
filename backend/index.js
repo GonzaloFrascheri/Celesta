@@ -432,6 +432,29 @@ app.put('/api/alertas/:id/leida', async (req, res) => {
   }
 });
 
+app.get('/api/alertas/:id', async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        id,
+        producto_maestro_id,
+        precio_nuevo,
+        precio_promedio,
+        diferencia,
+        created_at
+      FROM \`celesta-poc.${DATASET_ID}.Alertas\`
+      WHERE id = @id
+      LIMIT 1
+    `;
+    const [rows] = await bigquery.query({ query: sql, params: { id: req.params.id } });
+    if (rows.length === 0) return sendError(res, 'Alerta no encontrada', 404);
+    sendSuccess(res, rows[0]);
+  } catch (e) {
+    console.error('Error GET /api/alertas/:id', e);
+    sendError(res, 'Error interno obteniendo alerta', 500);
+  }
+});
+
 // READ ALL
 app.get('/api/compras', async (req, res) => {
   try {

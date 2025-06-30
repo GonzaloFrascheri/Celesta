@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import AlertasDashboard from './AlertasDashboard';
 import AlertCard from './AlertCard';
 import styles from './Alertas.module.css';
+import { FiBell } from 'react-icons/fi';
 
 export default function AlertasPage() {
   const API = process.env.NEXT_PUBLIC_API_URL!.replace(/\/$/, '');
@@ -36,8 +37,12 @@ export default function AlertasPage() {
   if (loading) return <p>Cargando alertas…</p>;
 
   return (
+    
     <div className={styles.container}>
-      <h1>Notificaciones de Precios</h1>
+      <h1 className={styles.pageTitle}>
+        <FiBell className={styles.icon} />
+        Notificaciones de Precios
+      </h1>
 
       <section className={styles.section}>
         <h2>Alertas por Leer ({pendientes.length})</h2>

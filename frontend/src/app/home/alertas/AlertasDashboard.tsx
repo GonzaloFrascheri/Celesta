@@ -98,6 +98,30 @@ export default function AlertasDashboard() {
 
   return (
     <div style={{ marginBottom: '2rem' }}>
+      {/* —— KPI CARDS —— */}
+      <div className={styles.kpiContainer}>
+        <div className={styles.kpiCard}>
+          <h3>Total</h3>
+          <p>{ byProduct.reduce((sum, p) => sum + p.total_alertas, 0) }</p>
+        </div>
+        <div className={styles.kpiCard}>
+          <h3>Alertas hoy</h3>
+          <p>{
+            // busca la métrica de hoy en 'daily'
+            daily.find(d => d.dia === new Date().toISOString().slice(0,10))
+              ?.total_alertas ?? 0
+          }</p>
+        </div>
+        <div className={styles.kpiCard}>
+          <h3>Promedio diario</h3>
+          <p>{
+            // suma todos y divide por número de días
+            (daily.reduce((sum, d) => sum + d.total_alertas, 0) / (daily.length||1))
+              .toFixed(1)
+          }</p>
+        </div>
+      </div>
+
       <h2>Métricas de Alertas</h2>
       <div className={styles.dashboardCharts}>
         <div className={styles.chartContainer}>
@@ -111,7 +135,8 @@ export default function AlertasDashboard() {
               scales: {
                 x: { title: { display: true, text: 'Día' } },
                 y: { title: { display: true, text: 'Cantidad de alertas' }, beginAtZero: true }
-              }
+              },
+              animation: { duration: 800 }
             }}
           />
         </div>
@@ -125,8 +150,16 @@ export default function AlertasDashboard() {
               },
               scales: {
                 x: { title: { display: true, text: 'Producto Maestro' } },
-                y: { title: { display: true, text: 'Total de alertas' }, beginAtZero: true }
-              }
+                y: {
+                  title: { display: true, text: 'Total de alertas' },
+                  beginAtZero: true,
+                  ticks: {
+                    stepSize: 1,
+                    callback: value => Number(value).toFixed(0)
+                  }
+                }
+              },
+              animation: { duration: 800 }
             }}
           />
         </div>

@@ -64,12 +64,18 @@ export default function AlertCard({
           <span className={styles.value}>${precioNuevo.toFixed(2)}</span>
         </p>
         <p>
-          <span className={styles.label}>Promedio 90d:</span>{' '}
+          <span className={styles.label}>Promedio 90 días:</span>{' '}
           <span className={styles.value}>${precioPromedio.toFixed(2)}</span>
         </p>
         <p>
           <span className={styles.label}>Diferencia:</span>{' '}
-          <span className={styles.value}>${diferencia.toFixed(2)}</span>
+          <span
+            className={`${styles.value} ${
+              diferencia > 0 ? styles.difPositive : styles.difNegative
+            }`}
+          >
+            ${diferencia.toFixed(2)}
+          </span>
         </p>
         <p className={styles.timestamp}>{fechaStr}</p>
       </div>
