@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import apiClient from '../../../../lib/api'; // RUTA CORREGIDA
-import styles from './Clientes.module.css'; // Usamos el mismo CSS que la página de nuevo cliente
+import apiClient from '../../../../lib/api'; 
+import styles from './Clientes.module.css';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
 
 export default function ClientesPage() {
@@ -12,6 +12,7 @@ export default function ClientesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
+  const [filter, setFilter] = useState('');
 
   // Función para cargar los clientes
   const fetchClientes = async () => {
@@ -50,18 +51,45 @@ export default function ClientesPage() {
     }
   };
 
-  if (loading) return <div className={styles.loader}>Cargando clientes...</div>;
+  if (loading) return <div className={styles.loader}>Cargando clientes…</div>;
   if (error) return <div className={styles.error}>{error}</div>;
+
+const search = filter.toLowerCase();
+const filtered = clientes.filter(c => {
+  const nombre = String(c.nombre || '').toLowerCase();
+  const rut    = String(c.rut    || '').toLowerCase();
+  const email  = String(c.email  || '').toLowerCase();
+  const telefono  = String(c.telefono  || '').toLowerCase();
+  
+
+  return (
+    nombre.includes(search) ||
+    rut.includes(search)    ||
+    email.includes(search)  ||
+    telefono.includes(search)
+  );
+});
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>Listado de Clientes</h1>
-        <Link href="/home/clientes/nuevo" className={styles.newButton}>
-          <FaPlus style={{ marginRight: '8px' }} />
-          Nuevo Cliente
-        </Link>
+        <div className={styles.controls}>
+         <input
+            type="text"
+            placeholder="🔍 Buscar cliente..."
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            className={styles.searchInput}
+          />
+          <Link href="/home/clientes/nuevo" className={styles.newButton}>
+            <FaPlus /> Nuevo Cliente
+          </Link>
+        </div>
       </div>
+
+      {/* CONTADOR */}
+     <p className={styles.count}>{filtered.length} cliente{filtered.length !== 1 ? 's' : ''}</p>
 
       <table className={styles.table}>
         <thead>
@@ -74,7 +102,7 @@ export default function ClientesPage() {
           </tr>
         </thead>
         <tbody>
-          {clientes.map((cliente) => (
+          {filtered.map((cliente) => (
             <tr key={cliente.id}>
               <td>{cliente.nombre}</td>
               <td>{cliente.rut}</td>

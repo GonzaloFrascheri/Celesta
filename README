@@ -1,107 +1,98 @@
-# Proyecto Full-Stack: Landing Page (Next.js + Node.js)
+Proyecto Celesta: Plataforma Inteligente de Gestión de Compras
+Este es un proyecto full-stack que consiste en una interfaz de usuario moderna construida con Next.js y una API de backend con Node.js. La aplicación incorpora funcionalidades de Machine Learning para la categorización automática de productos y está completamente integrada con Google Cloud para su despliegue y operación.
 
-[cite_start]Este es un proyecto full-stack que consiste en una interfaz de usuario moderna construida con Next.js y una API de backend con Node.js y Express. El proyecto está completamente dockerizado para el desarrollo y utiliza un pipeline de CI/CD para despliegues automáticos en Google Cloud.
+🏛️ Arquitectura del Sistema
+El proyecto se compone de varias piezas clave que trabajan en conjunto para ofrecer una solución robusta y escalable.
 
-## Arquitectura
+Frontend: Construido con Next.js y React. Se ejecuta como un servicio serverless en Cloud Run, ofreciendo una interfaz de usuario rápida y reactiva.
 
-El proyecto se compone de varias piezas clave que trabajan en conjunto.
+Backend: Una API REST construida con Node.js y Express. También se ejecuta como un servicio serverless en Cloud Run, manejando toda la lógica de negocio.
 
-* [cite_start]**Frontend**: Construido con **Next.js**, **React**, y **TypeScript**. Se ejecuta como un servicio en **Cloud Run**.
-* [cite_start]**Backend**: Una API REST construida con **Node.js** y **Express**. También se ejecuta como un servicio en **Cloud Run**.
-* **Base de Datos Relacional**: **Cloud SQL (PostgreSQL)** para almacenar datos de usuarios y entidades maestras.
-* **Data Warehouse**: **BigQuery** para almacenar datos transaccionales (compras, precios) para análisis.
-* [cite_start]**Entorno de Desarrollo**: Una **VM en Compute Engine** que ejecuta los servicios con **Docker Compose** para un desarrollo rápido y conectado a los servicios de GCP. 
-* **CI/CD**: **Cloud Build** se activa con cada `git push` a la rama `main` para desplegar automáticamente los servicios a Cloud Run.
+Base de Datos Híbrida:
 
----
+Firestore: Utilizada como base de datos NoSQL para entidades con datos en tiempo real, como la gestión de Clientes.
 
-## 🚀 Guía de Inicio y Desarrollo
+BigQuery: Actúa como nuestro Data Warehouse principal para almacenar datos transaccionales masivos (Compras, Proveedores, Categorías) y es el motor de nuestras capacidades de análisis.
 
-Este proyecto utiliza un entorno de desarrollo remoto en una VM de Google Cloud para asegurar la conectividad con las bases de datos.
+Inteligencia Artificial:
 
-### 1. Prerrequisitos
+BigQuery ML: Usamos un modelo de clasificación entrenado para analizar las descripciones de las compras y sugerir automáticamente el producto_maestro_id correcto, automatizando la categorización.
 
-Asegúrate de tener instaladas las siguientes herramientas en tu **máquina local**:
+Procesamiento de Facturas (CFEs):
 
-* [Git](https://git-scm.com/)
-* [Google Cloud SDK (gcloud)](https://cloud.google.com/sdk/docs/install)
-* Un editor de código como [VS Code](https://code.visualstudio.com/).
+Un pipeline serverless que utiliza SendGrid para recibir correos con facturas y una Cloud Function para procesar los XML adjuntos y guardarlos en BigQuery.
 
-### 2. Configuración Inicial del Entorno (Hacer una sola vez)
+CI/CD (Integración y Despliegue Continuo):
 
-Estos pasos preparan la máquina virtual (VM) para el desarrollo.
+Cloud Build se activa automáticamente con cada git push a la rama main para construir las imágenes de Docker y desplegar las nuevas versiones del frontend y backend en Cloud Run sin intervención manual.
 
-1.  **Clonar el Repositorio en la VM:**
-    * Conéctate a tu VM de desarrollo (`vm-debug-celesta`) usando el **SSH del Navegador** desde la consola de GCP.
-    * Dentro de la VM, instala Git y clona el repositorio usando un Personal Access Token (PAT) de GitHub:
-        ```bash
-        sudo apt-get update && sudo apt-get install -y git
-        git clone https://[TU_USUARIO]:[TU_PAT]@[github.com/GonzaloFrascheri/Celesta.git](https://github.com/GonzaloFrascheri/Celesta.git)
-        ```
+🚀 Guía de Desarrollo y Puesta en Marcha
+Para agilizar el desarrollo y evitar los problemas de red de los entornos locales, hemos adoptado un flujo de trabajo híbrido.
 
-2.  **Configurar Variables de Entorno en la VM:**
-    * Dentro de la VM, navega a la carpeta del backend: `cd ~/Celesta/backend`.
-    * Crea el archivo de configuración de entorno: `nano .env`.
-    * Pega el siguiente contenido, reemplazando con tus datos. **`DB_HOST` debe ser la IP privada de tu instancia de Cloud SQL.**
-        ```env
-        DB_USER=postgres
-        DB_PASSWORD=tu_contraseña_super_secreta
-        DB_HOST=10.0.0.3
-        DB_PORT=5432
-        DB_DATABASE=postgres
-        ```
-    * Guarda y cierra (`Ctrl+O`, `Enter`, `Ctrl+X`).
+Filosofía: El backend vive y se ejecuta en la nube (Cloud Run), donde sabemos que funciona a la perfección. El frontend se ejecuta localmente en tu máquina para que puedas ver los cambios en la interfaz de usuario al instante.
 
-3.  **Instalar Docker y Levantar Servicios en la VM:**
-    * Dentro de la VM, instala Docker siguiendo la guía oficial (o nuestros pasos anteriores).
-    * Añade tu usuario al grupo de Docker: `sudo usermod -aG docker $USER` (requiere salir y volver a entrar por SSH).
-    * Desde la raíz del proyecto (`~/Celesta`), levanta los contenedores por primera vez:
-        ```bash
-        docker compose up --build
-        ```
-    * Deja esta terminal corriendo. Tus servicios ya están activos en la VM.
+1. Prerrequisitos
+Asegúrate de tener instaladas las siguientes herramientas en tu máquina local:
 
-### 3. Flujo de Trabajo de Desarrollo (Día a Día)
+Git
 
-Este es el ciclo que seguirás para cada cambio que hagas.
+Docker (y Docker Compose)
 
-1.  **Paso 1: Edita el código en tu MÁQUINA LOCAL**
-    * Usa tu VS Code local para modificar los archivos del proyecto en tu computadora.
+Un editor de código como VS Code.
 
-2.  **Paso 2: Sincroniza los cambios con la VM**
-    * Abre una terminal en **tu computadora local**.
-    * Navega a la carpeta que contiene tu proyecto.
-    * Ejecuta el siguiente comando `scp` para subir tus cambios a la VM. Reemplaza `us-central1-b` por la zona correcta si es diferente.
-        ```bash
-        gcloud compute scp --recurse ./Celesta vm-debug-celesta:~ --zone=us-central1-b
-        ```
+2. Configuración del Entorno Local (Hacer una sola vez)
+Clonar el Repositorio:
 
-3.  **Paso 3: Observa la Magia**
-    * Gracias a los volúmenes y a `nodemon` que configuramos, `docker compose` en la VM detectará los archivos actualizados y **reiniciará el servicio del backend automáticamente**. No necesitas hacer nada más en la VM.
+Clona el proyecto en tu máquina local.
 
-4.  **Paso 4: Prueba tus Cambios**
-    * Usa Postman para probar tu API, apuntando a la **IP pública de la VM**, en el puerto `3001` para el backend o `3000` para el frontend.
-        * **Backend (API)**: `http://[IP-EXTERNA-DE-LA-VM]:3001`
-        * **Frontend (Next.js)**: `http://[IP-EXTERNA-DE-LA-VM]:3000`
+git clone https://...
 
-### 4. Despliegue a Producción
+Crear el Archivo de Configuración .env:
 
-* Cuando tus cambios estén probados y listos, simplemente haz un `push` a la rama `main` desde tu máquina local:
-    ```bash
-    git add .
-    git commit -m "Mi nueva funcionalidad"
-    git push origin main
-    ```
-* Esto activará los disparadores de **Cloud Build**, que desplegarán la nueva versión automáticamente en **Cloud Run**.
+En la raíz de tu proyecto, crea un archivo llamado .env.
 
-cambios de prueba
-cambios
-prueba
-prueba
-prueba
-prueba
-prueba
-prueba
-prueba
-prueba
-prueba
+Pega el siguiente contenido. Este archivo le dirá a tu frontend local cómo encontrar tu backend en la nube y cómo conectarse a Firebase.
+
+# === Variables de Entorno para Desarrollo Local ===
+
+# 1. Apunta a tu backend desplegado en Cloud Run
+NEXT_PUBLIC_API_URL=https://celesta-backend-1069223002409.us-central1.run.app/api
+
+# 2. Rellena estas variables con las de tu proyecto de Firebase
+# Las encuentras en la Consola de Firebase -> Configuración del Proyecto (⚙️)
+NEXT_PUBLIC_FIREBASE_API_KEY=TU_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=TU_FIREBASE_AUTH_DOMAIN
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=TU_FIREBASE_PROJECT_ID
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=TU_FIREBASE_STORAGE_BUCKET
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=TU_FIREBASE_MESSAGING_SENDER_ID
+NEXT_PUBLIC_FIREBASE_APP_ID=TU_FIREBASE_APP_ID
+
+3. Flujo de Trabajo de Desarrollo (Día a Día)
+Este es el ciclo que seguirás para cada cambio que hagas en el frontend.
+
+Paso 1: Levanta el Contenedor del Frontend
+
+Abre una terminal en la raíz de tu proyecto.
+
+Ejecuta el siguiente comando. Solo necesitas correr el frontend.
+
+docker-compose up --build frontend
+
+La bandera --build asegura que se tomen todos tus últimos cambios en el código.
+
+Paso 2: Desarrolla y Prueba
+
+Abre http://localhost:3000 en tu navegador.
+
+Modifica los archivos de tu frontend en VS Code. Gracias al "Hot Reloading" de Next.js, la mayoría de los cambios se verán reflejados en el navegador al instante, sin necesidad de reiniciar el contenedor.
+
+Prueba toda la funcionalidad. Tu frontend local estará haciendo peticiones reales a tu backend en la nube.
+
+4. Despliegue a Producción
+Cuando tus cambios en el frontend estén listos y probados, o cuando hagas un cambio en el backend, simplemente haz un push a la rama main desde tu máquina local:
+
+git add .
+git commit -m "Descripción de mis cambios"
+git push origin main
+
+Esto activará Cloud Build, que desplegará la nueva versión automáticamente en Cloud Run. ¡No necesitas hacer nada más!

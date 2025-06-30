@@ -104,7 +104,12 @@ export default function AlertaDetail() {
     : fechaObj.toLocaleString();
 
   // 5) Preparo datos para el gráfico
-  const labels = history.map(h => new Date(h.fecha).toLocaleDateString());
+  const labels = history.map(h => {
+    const d = parseDate(h.fecha);
+    return isNaN(d.getTime())
+      ? '—'
+      : d.toLocaleDateString();
+  });
   const dataPoints = history.map(h => h.precio);
 
   const chartData: ChartData<'line', number[], unknown> = {

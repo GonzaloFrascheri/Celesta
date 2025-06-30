@@ -399,7 +399,13 @@ app.get('/api/alertas', async (req, res) => {
     // lee el parámetro: por defecto 'false' → sólo pendientes
     const leidaParam = (req.query.leida === 'true');
     const sql = `
-      SELECT *
+      SELECT 
+        id,
+        producto_maestro_id,
+        precio_nuevo,
+        precio_promedio,
+        diferencia,
+        FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', created_at, 'America/Montevideo') AS created_at
       FROM \`celesta-poc.${DATASET_ID}.Alertas\`
       WHERE leida = @leida
       ORDER BY created_at DESC
@@ -441,7 +447,7 @@ app.get('/api/alertas/:id', async (req, res) => {
         precio_nuevo,
         precio_promedio,
         diferencia,
-        created_at
+        FORMAT_TIMESTAMP('%Y-%m-%d %H:%M', created_at, 'America/Montevideo') AS created_at
       FROM \`celesta-poc.${DATASET_ID}.Alertas\`
       WHERE id = @id
       LIMIT 1
