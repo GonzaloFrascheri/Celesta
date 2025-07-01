@@ -9,6 +9,7 @@ export default function Sidebar({ onLinkClick }) {
   const API = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
 
   const [alertCount, setAlertCount] = useState(0);
+  const [cfeCount,   setCfeCount]   = useState(0);
 
   useEffect(() => {
     if (!API) {
@@ -30,16 +31,14 @@ export default function Sidebar({ onLinkClick }) {
   useEffect(() => {
     if (!API) return;
     fetch(`${API}/cfes?limit=100`)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
+      .then(r => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then(j => {
+        // sendSuccess envuelve tu payload en { success, data }
         if (j.success && Array.isArray(j.data.items)) {
           setCfeCount(j.data.items.length);
         }
       })
-      .catch(err => console.error('Error al leer CFEs:', err));
+      .catch(err => console.error('Error CFEs:', err));
   }, [API]);
 
   return (
@@ -64,16 +63,10 @@ export default function Sidebar({ onLinkClick }) {
           )}
         </li>
         <li className={styles.navItemWithBadge}>
-          <Link
-            href="/home/cfes"
-            className={styles.navLink}
-            onClick={onLinkClick}
-          >
+          <Link href="/home/cfes" className={styles.navLink} onClick={onLinkClick}>
             CFEs
           </Link>
-          {cfeCount > 0 && (
-            <span className={styles.badge}>{cfeCount}</span>
-          )}
+          {cfeCount > 0 && <span className={styles.badge}>{cfeCount}</span>}
         </li>
       </ul>
     </aside>

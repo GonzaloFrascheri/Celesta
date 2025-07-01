@@ -76,7 +76,7 @@ Abre una terminal en la raíz de tu proyecto.
 
 Ejecuta el siguiente comando. Solo necesitas correr el frontend.
 
-docker-compose up --build frontend
+docker compose up --build frontend
 
 La bandera --build asegura que se tomen todos tus últimos cambios en el código.
 
