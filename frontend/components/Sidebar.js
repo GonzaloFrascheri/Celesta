@@ -30,15 +30,20 @@ export default function Sidebar({ onLinkClick }) {
 
   useEffect(() => {
     if (!API) return;
-    fetch(`${API}/cfes?limit=100`)
-      .then(r => (r.ok ? r.json() : Promise.reject(r.statusText)))
+    fetch(`${API}/cfes?limit=10`)
+      .then(r => r.json())
       .then(j => {
-        // sendSuccess envuelve tu payload en { success, data }
-        if (j.success && Array.isArray(j.data.items)) {
-          setCfeCount(j.data.items.length);
+        if (j.success && Array.isArray(j.data?.items)) {
+          setCfes(j.data.items);
+        } else {
+          console.warn('API CFEs fallo:', j.error);
+          setCfes([]);      // sin CFEs
         }
       })
-      .catch(err => console.error('Error CFEs:', err));
+      .catch(err => {
+        console.error('Fetch CFEs error:', err);
+        setCfes([]);
+      });
   }, [API]);
 
   return (

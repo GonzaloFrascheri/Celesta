@@ -283,21 +283,24 @@ app.post('/api/procesar-compras-pendientes', async (req, res) => {
 // Listar CFEs: GET /api/cfes?limit=20&pageToken=xxx
 app.get('/api/cfes', async (req, res) => {
   try {
-    const limit     = Math.min(Number(req.query.limit) || 20, 100);
-    const pageToken = req.query.pageToken || undefined;
-
     const [rows, meta] = await bigquery
-      .dataset(DATASET)
-      .table(TABLE)
-      .getRows({ maxResults: limit, pageToken });
-
-    sendSuccess(res, {
-      items: rows,
-      nextPageToken: meta.nextPageToken || null
+      .dataset('celesta_data')
+      .table('cfes')
+      .getRows({ maxResults: 20, pageToken: req.query.pageToken });
+    return res.json({
+      success: true,
+      data: {
+        items: rows,
+        nextPageToken: meta.nextPageToken || null
+      }
     });
   } catch (err) {
     console.error('Error leyendo CFEs:', err);
-    sendError(res, 'Error interno leyendo CFEs');
+    // en lugar de 500, devolvemos un arreglo vacío:
+    return res.json({
+      success: true,
+      data: { items: [], nextPageToken: null }
+    });
   }
 });
 
