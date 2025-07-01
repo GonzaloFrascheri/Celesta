@@ -60,6 +60,8 @@ const bigquery = new BigQuery({
 });
 console.log("--- [Punto 7] ✅ BigQuery inicializado con éxito ---");
 
+const TABLE   = 'cfes';
+
 // --- Helpers ---
 const sendSuccess = (res, data, code = 200) => res.status(code).json({ success: true, data });
 const sendError   = (res, msg, code = 500) => res.status(code).json({ success: false, error: msg });
@@ -275,6 +277,57 @@ app.post('/api/procesar-compras-pendientes', async (req, res) => {
       console.error('Error fatal en el procesamiento por lotes:', error);
       sendError(res, 'Error crítico durante el procesamiento por lotes.');
     }
+});
+
+/** CFEs */
+// Listar CFEs: GET /api/cfes?limit=20&pageToken=xxx
+app.get('/api/cfes', async (req, res) => {
+  try {
+    const limit     = Math.min(Number(req.query.limit) || 20, 100);
+    const pageToken = req.query.pageToken || undefined;
+
+    const [rows, meta] = await bigquery
+      .dataset(DATASET)
+      .table(TABLE)
+      .getRows({ maxResults: limit, pageToken });
+
+    sendSuccess(res, {
+      items: rows,
+      nextPageToken: meta.nextPageToken || null
+    });
+  } catch (err) {
+    console.error('Error leyendo CFEs:', err);
+    sendError(res, 'Error interno leyendo CFEs');
+  }
+});
+
+// Detalle de un CFE: GET /api/cfes/:id
+app.get('/api/cfes/:id', async (req, res) => {
+  try {
+    // Suponemos que tu BigQuery client ya sabe el projectId,
+    // si no, ponlo explícito en la cadena (p.ej. `mi-proyecto.celesta_data.cfes`)
+    const sql = `
+      SELECT *
+      FROM \`${DATASET}.${TABLE}\`
+      WHERE id = @id
+      LIMIT 1
+    `;
+    const options = {
+      query: sql,
+      params: { id: req.params.id },
+      location: 'US'
+    };
+    const [job]  = await bigquery.createQueryJob(options);
+    const [rows] = await job.getQueryResults();
+
+    if (rows.length === 0) {
+      return sendError(res, 'CFE no encontrado', 404);
+    }
+    sendSuccess(res, rows[0]);
+  } catch (err) {
+    console.error('Error en detalle CFE:', err);
+    sendError(res, 'Error interno leyendo CFE');
+  }
 });
 
 /** COMPRAS */

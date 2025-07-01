@@ -27,6 +27,21 @@ export default function Sidebar({ onLinkClick }) {
       .catch(err => console.error('Error al leer alertas:', err));
   }, [API]);
 
+  useEffect(() => {
+    if (!API) return;
+    fetch(`${API}/cfes?limit=100`)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(j => {
+        if (j.success && Array.isArray(j.data.items)) {
+          setCfeCount(j.data.items.length);
+        }
+      })
+      .catch(err => console.error('Error al leer CFEs:', err));
+  }, [API]);
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logo}>Celesta</div>
@@ -46,6 +61,18 @@ export default function Sidebar({ onLinkClick }) {
           </Link>
           {alertCount > 0 && (
             <span className={styles.badge}>{alertCount}</span>
+          )}
+        </li>
+        <li className={styles.navItemWithBadge}>
+          <Link
+            href="/home/cfes"
+            className={styles.navLink}
+            onClick={onLinkClick}
+          >
+            CFEs
+          </Link>
+          {cfeCount > 0 && (
+            <span className={styles.badge}>{cfeCount}</span>
           )}
         </li>
       </ul>
