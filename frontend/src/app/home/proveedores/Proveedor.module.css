@@ -22,10 +22,8 @@
 /* --- ESTILOS DEL FORMULARIO --- */
 .form {
   display: grid;
-  /* Por defecto (desktop), usamos 2 columnas */
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
-  margin-top: 2rem;
 }
 
 .formGroup {
@@ -36,6 +34,14 @@
 .label {
   font-weight: 500;
   margin-bottom: 0.5rem;
+}
+
+.actions {
+  grid-column: 1 / -1;         /* ocupa de la columna 1 hasta el final */
+  display: flex;
+  justify-content: flex-end;   /* alinea los botones a la derecha */
+  gap: 1rem;                   /* espacio entre botones */
+  margin-top: 1.5rem;          /* separa de los inputs */
 }
 
 .input, .select {
@@ -98,8 +104,12 @@
 }
 
 .submitButton {
-  background-color: #2563eb;
+  background: #0070f3;
   color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
 }
 .submitButton:disabled {
   background-color: #9ca3af;

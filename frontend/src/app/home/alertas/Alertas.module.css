@@ -157,3 +157,38 @@
   font-weight: bold;
   color: var(--primary-color);
 }
+
+.searchInput {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  margin: 0.5rem 0 1rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.pagination button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #0070f3;
+  background: white;
+  color: #0070f3;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pagination span {
+  font-weight: bold;
+}

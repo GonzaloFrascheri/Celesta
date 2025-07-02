@@ -85,7 +85,12 @@ export default function ProveedorPage() {
               <td data-label="Acciones">
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   {/* Los botones van aquí dentro como ya los tienes */}
-                  <button onClick={() => router.push(`/home/proveedores/${proveedor.id}`)} /* ... */><FaEdit /></button>
+                  <button
+                    onClick={() => router.push(`/home/proveedores/editar/${proveedor.id}`)}
+                    className={styles.actionButton}
+                  >
+                    <FaEdit />
+                  </button>
                   <button onClick={() => handleDelete(proveedor.id, proveedor.razon_social)} /* ... */><FaTrash /></button>
                 </div>
               </td>
