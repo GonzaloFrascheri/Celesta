@@ -20,9 +20,6 @@ export function getFirebaseAuth() {
   if (typeof window === 'undefined') {
     return null;  // No hay auth en server
   }
-  console.log("🔑 usando API key en cliente:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
-  console.log("🌐 authDomain:", process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN);
-
   const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   return getAuth(app);
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import apiClient from '../../../../../lib/api';
 import styles from '../Proveedor.module.css';
 
@@ -43,11 +44,11 @@ export default function NuevoProveedorPage() {
     try {
       // CORRECCIÓN: Apuntamos a la ruta completa de tu API.
       await apiClient.post('/proveedor', payload);
-      alert('¡Proveedor agregado con éxito!');
+      toast.success('Proveedor creado con éxito.');
       router.push('/home/proveedores');
     } catch (err) {
       console.error("Error al crear el proveedor:", err);
-      setError("Hubo un error al crear el proveedor. Por favor, revisa los datos.");
+      toast.success('Hubo un error al guardar el proveedor. Por favor, revisa los datos.');
     } finally {
       setLoading(false);
     }

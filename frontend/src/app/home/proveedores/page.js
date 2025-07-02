@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import apiClient from "../../../../lib/api"; // Asegúrate que esta ruta es correcta
 import styles from './Proveedor.module.css';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
@@ -37,11 +38,11 @@ export default function ProveedorPage() {
     if (window.confirm(`¿Estás seguro de que deseas eliminar al proveedor "${proveedorNombre}"? Esta acción no se puede deshacer.`)) {
       try {
         await apiClient.delete(`/proveedor/${proveedorId}`);
-        alert('Proveedor eliminado con éxito.');
+        toast.success('Proveedor eliminado con éxito.');
         fetchProveedores(); 
       } catch (err) {
         console.error("Error al eliminar el proveedor:", err);
-        alert('Hubo un error al intentar eliminar el proveedor.');
+        toast.success('Hubo un error al intentar eliminar el proveedor');
       }
     }
   };

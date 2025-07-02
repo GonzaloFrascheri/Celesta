@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import apiClient from '../../../../../lib/api';
 import styles from '../Clientes.module.css'; // Reutilizaremos los estilos
 import { FaSave, FaTimes } from 'react-icons/fa';
@@ -43,11 +44,11 @@ export default function NuevoClientePage() {
     try {
       // Usamos el endpoint que ya probamos con Postman
       await apiClient.post('/clientes', cliente);
-      alert('¡Cliente creado con éxito!');
-      router.push('/home/clientes'); // Redirige a la lista de clientes
+      toast.success('¡Cliente creado con éxito!');
+      router.push('/home/clientes');
     } catch (err) {
       console.error("Error al crear el cliente:", err);
-      setError("Hubo un error al guardar el cliente. Por favor, revisa los datos.");
+      toast.success('Hubo un erro al guardar el cliente. Por favor, revisa los datos.');
     } finally {
       setLoading(false);
     }

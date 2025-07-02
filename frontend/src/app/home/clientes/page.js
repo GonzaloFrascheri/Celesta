@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import apiClient from '../../../../lib/api'; 
 import styles from './Clientes.module.css';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
@@ -41,12 +42,12 @@ export default function ClientesPage() {
     if (window.confirm(`¿Estás seguro de que deseas eliminar al cliente "${clienteNombre}"?`)) {
       try {
         await apiClient.delete(`/clientes/${clienteId}`);
-        alert('Cliente eliminado con éxito.');
+        toast.success('¡Cliente creado con éxito!');
         // Volvemos a cargar la lista para que el cliente eliminado desaparezca
         fetchClientes(); 
       } catch (err) {
         console.error("Error al eliminar el cliente:", err);
-        alert('Hubo un error al intentar eliminar el cliente.');
+        toast.success('Hubo un error al intentar eliminar el cliente');
       }
     }
   };

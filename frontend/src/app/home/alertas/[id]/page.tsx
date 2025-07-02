@@ -20,7 +20,7 @@ import {
 import type { TooltipItem } from 'chart.js';
 import styles from '../AlertasDetail.module.css';
 
-// ① Registra Chart.js
+
 ChartJS.register(
   CategoryScale,
   LinearScale,

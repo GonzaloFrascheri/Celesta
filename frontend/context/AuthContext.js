@@ -2,11 +2,13 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import {
-  onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut
-} from 'firebase/auth';
+   onAuthStateChanged,
+   GoogleAuthProvider,
+   signInWithPopup,
+   signOut, 
+   setPersistence, 
+   browserSessionPersistence
+ } from 'firebase/auth';
 import { getFirebaseAuth } from '../lib/firebase';
 import { useRouter } from 'next/navigation';
 
@@ -28,6 +30,10 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
+    // 🟢 Opcional: forzar persistencia SOLO en la sesión actual (se pierde al cerrar pestaña)
+    setPersistence(auth, browserSessionPersistence)
+      .catch(err => console.error("Error al establecer persistencia:", err));
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
@@ -38,9 +44,14 @@ export function AuthProvider({ children }) {
   const loginWithGoogle = async () => {
     const auth = getFirebaseAuth();
     if (!auth) return;
+
+    // 🔴 Configuramos el provider para que SIEMPRE muestre el chooser
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+
     try {
       await signInWithPopup(auth, provider);
+      // Después de login, puedes hacer router.push('/home') si quieres
     } catch (error) {
       console.error("Error durante el login con Google:", error);
     }

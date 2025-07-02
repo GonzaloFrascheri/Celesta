@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import toast from 'react-hot-toast';
 import apiClient from '../../../../../lib/api'; // Asegúrate que esta ruta es correcta
 import styles from '../Proveedor.module.css';
 
@@ -59,7 +60,7 @@ export default function EditarProveedorPage() {
         razon_social: proveedor.razon_social,
         giro: proveedor.giro,
       });
-      alert('¡Proveedor actualizado con éxito!');
+      toast.success('Proveedor actualizado con éxito.');
       router.push('/home/proveedores'); // Volvemos a la lista
     } catch (err) {
       console.error("Error al actualizar el proveedor:", err);
