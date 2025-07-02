@@ -13,7 +13,7 @@ export default function CFEPage() {
     setLoading(true);
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/cfes/${id}`)
       .then(res => res.json())
-      .then(json => setCfe(json.data)) // según sendSuccess
+      .then(json => setCfe(json.data))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);

@@ -198,6 +198,7 @@ app.put('/api/clientes/:id', async (req, res) => {
 });
 
 app.delete('/api/clientes/:id', async (req, res) => {
+  console.log('🔴 DELETE recibido en Express para cliente.id =', req.params.id);
   try {
     const ref = clientes.doc(req.params.id);
     if (!(await ref.get()).exists) return sendError(res, 'Cliente no existe', 404);

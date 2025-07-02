@@ -34,15 +34,15 @@ export default function Sidebar({ onLinkClick }) {
       .then(r => r.json())
       .then(j => {
         if (j.success && Array.isArray(j.data?.items)) {
-          setCfes(j.data.items);
+          setCfeCount(j.data.items.length);
         } else {
           console.warn('API CFEs fallo:', j.error);
-          setCfes([]);      // sin CFEs
+          setCfeCount(0);
         }
       })
       .catch(err => {
         console.error('Fetch CFEs error:', err);
-        setCfes([]);
+        setCfeCount(0);
       });
   }, [API]);
 

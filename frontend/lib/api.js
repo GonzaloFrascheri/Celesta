@@ -5,6 +5,9 @@ import { getFirebaseAuth  } from './firebase'; // Importamos la instancia de aut
 
 const auth = getFirebaseAuth();
 
+const baseURL = process.env.NEXT_PUBLIC_API_URL
+  ?.replace(/\/$/, '')
+
 // Creamos una instancia de Axios con configuración base
 const apiClient = axios.create({
   // Leemos la URL base de nuestro backend desde las variables de entorno
