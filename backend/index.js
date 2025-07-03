@@ -61,6 +61,8 @@ const bigquery = new BigQuery({
 console.log("--- [Punto 7] ✅ BigQuery inicializado con éxito ---");
 
 const TABLE   = 'cfes';
+const PROJECT_ID = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;
+const TABLE_ID   = 'cfes';            // coincide con tu tabla
 
 // --- Helpers ---
 const sendSuccess = (res, data, code = 200) => res.status(code).json({ success: true, data });
@@ -281,52 +283,65 @@ app.post('/api/procesar-compras-pendientes', async (req, res) => {
 });
 
 /** CFEs */
-// Listar CFEs: GET /api/cfes?limit=20&pageToken=xxx
 app.get('/api/cfes', async (req, res) => {
   try {
-    const [rows, meta] = await bigquery
-      .dataset('celesta_data')
-      .table('cfes')
-      .getRows({ maxResults: 20, pageToken: req.query.pageToken });
+    // 1) lee el parámetro limit (por defecto 20)
+    const limit = parseInt(req.query.limit, 10) || 20;
+
+    // 2) arma y ejecuta la consulta
+    const sql = `
+      SELECT
+        id,
+        emisor_nombre,
+        receptor_rut,
+        tipo_cfe,
+        serie_cfe,
+        numero_cfe,
+        fecha_emision,
+        monto_total,
+        moneda,
+        nombre_archivo_original,
+        fecha_procesamiento
+      FROM \`${PROJECT_ID}.${DATASET_ID}.cfes\`
+      ORDER BY fecha_procesamiento DESC
+      LIMIT @limit
+    `;
+    const options = {
+      query: sql,
+      params: { limit },
+      location: 'US'            // asegúrate de que coincida con tu dataset
+    };
+    const [rows] = await bigquery.query(options);
+
+    // 3) responde con el formato que espera el frontend
     return res.json({
       success: true,
       data: {
         items: rows,
-        nextPageToken: meta.nextPageToken || null
+        nextPageToken: null     // por ahora no implementamos cursor
       }
     });
   } catch (err) {
-    console.error('Error leyendo CFEs:', err);
-    // en lugar de 500, devolvemos un arreglo vacío:
-    return res.json({
-      success: true,
-      data: { items: [], nextPageToken: null }
-    });
+    console.error('❌ Error leyendo CFEs:', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Detalle de un CFE: GET /api/cfes/:id
+// DETALLE: GET /api/cfes/:id
 app.get('/api/cfes/:id', async (req, res) => {
+  const sql = `
+    SELECT *
+    FROM \`${PROJECT_ID}.${DATASET_ID}.${TABLE_ID}\`
+    WHERE id = @id
+    LIMIT 1
+  `;
   try {
-    // Suponemos que tu BigQuery client ya sabe el projectId,
-    // si no, ponlo explícito en la cadena (p.ej. `mi-proyecto.celesta_data.cfes`)
-    const sql = `
-      SELECT *
-      FROM \`${DATASET}.${TABLE}\`
-      WHERE id = @id
-      LIMIT 1
-    `;
-    const options = {
+    const [rows] = await bigquery.query({
       query: sql,
       params: { id: req.params.id },
       location: 'US'
-    };
-    const [job]  = await bigquery.createQueryJob(options);
-    const [rows] = await job.getQueryResults();
-
-    if (rows.length === 0) {
-      return sendError(res, 'CFE no encontrado', 404);
-    }
+    });
+    if (rows.length === 0) return sendError(res, 'CFE no encontrado', 404);
     sendSuccess(res, rows[0]);
   } catch (err) {
     console.error('Error en detalle CFE:', err);
