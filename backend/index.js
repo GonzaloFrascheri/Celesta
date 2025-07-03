@@ -285,10 +285,8 @@ app.post('/api/procesar-compras-pendientes', async (req, res) => {
 /** CFEs */
 app.get('/api/cfes', async (req, res) => {
   try {
-    // 1) lee el parámetro limit (por defecto 20)
     const limit = parseInt(req.query.limit, 10) || 20;
 
-    // 2) arma y ejecuta la consulta
     const sql = `
       SELECT
         id,
@@ -302,24 +300,20 @@ app.get('/api/cfes', async (req, res) => {
         moneda,
         nombre_archivo_original,
         fecha_procesamiento
-      FROM \`${PROJECT_ID}.${DATASET_ID}.cfes\`
+      FROM \`celesta_data.cfes\`
       ORDER BY fecha_procesamiento DESC
       LIMIT @limit
     `;
-    const options = {
+
+    const [rows] = await bigquery.query({
       query: sql,
       params: { limit },
-      location: 'US'            // asegúrate de que coincida con tu dataset
-    };
-    const [rows] = await bigquery.query(options);
+      location: 'US'
+    });
 
-    // 3) responde con el formato que espera el frontend
     return res.json({
       success: true,
-      data: {
-        items: rows,
-        nextPageToken: null     // por ahora no implementamos cursor
-      }
+      data: { items: rows, nextPageToken: null }
     });
   } catch (err) {
     console.error('❌ Error leyendo CFEs:', err);
