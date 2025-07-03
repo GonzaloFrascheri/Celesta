@@ -49,24 +49,20 @@ console.log("--- ✅ Firebase Admin SDK inicializado con éxito ---"); // Añad�
 
 // --- Inicializa BigQuery (Versión CORREGIDA) ---
 console.log("--- [Punto 6] Intentando inicializar BigQuery... ---");
-const DATASET_ID = process.env.BIGQUERY_DATASET_ID;
+const DATASET_ID = process.env.BIGQUERY_DATASET_ID || 'celesta_data';
 if (!DATASET_ID) {
   console.error('❌ BIGQUERY_DATASET_ID no definido');
   process.exit(1);
 }
-const bigquery = new BigQuery({
-  projectId: 'celesta-poc',
-  location:  'US'
-});
+const bigquery = new BigQuery({});
+
 console.log("--- [Punto 7] ✅ BigQuery inicializado con éxito ---");
 
 const TABLE   = 'cfes';
-const PROJECT_ID = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;
-const TABLE_ID   = 'cfes';            // coincide con tu tabla
 
 // --- Helpers ---
 const sendSuccess = (res, data, code = 200) => res.status(code).json({ success: true, data });
-const sendError   = (res, msg, code = 500) => res.status(code).json({ success: false, error: msg });
+const sendError   = (res, msg,  code = 500) => res.status(code).json({ success: false, error: msg });
 
 // --- Health Check para la Ruta Raíz ---
 app.get('/', (req, res) => {
@@ -286,7 +282,6 @@ app.post('/api/procesar-compras-pendientes', async (req, res) => {
 app.get('/api/cfes', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit, 10) || 20;
-
     const sql = `
       SELECT
         id,
@@ -300,46 +295,42 @@ app.get('/api/cfes', async (req, res) => {
         moneda,
         nombre_archivo_original,
         fecha_procesamiento
-      FROM \`celesta_data.cfes\`
+      FROM \`${DATASET_ID}.${TABLE}\`
       ORDER BY fecha_procesamiento DESC
       LIMIT @limit
     `;
-
     const [rows] = await bigquery.query({
       query: sql,
-      params: { limit },
-      location: 'US'
+      params: { limit }
     });
-
-    return res.json({
-      success: true,
-      data: { items: rows, nextPageToken: null }
-    });
+    // devolvemos la misma forma que tus otros endpoints:
+    sendSuccess(res, { items: rows, nextPageToken: null });
   } catch (err) {
     console.error('❌ Error leyendo CFEs:', err);
-    return res.status(500).json({ success: false, error: err.message });
+    sendError(res, err.message);
   }
 });
 
 // DETALLE: GET /api/cfes/:id
 app.get('/api/cfes/:id', async (req, res) => {
-  const sql = `
-    SELECT *
-    FROM \`${PROJECT_ID}.${DATASET_ID}.${TABLE_ID}\`
-    WHERE id = @id
-    LIMIT 1
-  `;
   try {
+    const sql = `
+      SELECT *
+      FROM \`${DATASET_ID}.${TABLE}\`
+      WHERE id = @id
+      LIMIT 1
+    `;
     const [rows] = await bigquery.query({
       query: sql,
-      params: { id: req.params.id },
-      location: 'US'
+      params: { id: req.params.id }
     });
-    if (rows.length === 0) return sendError(res, 'CFE no encontrado', 404);
+    if (rows.length === 0) {
+      return sendError(res, 'CFE no encontrado', 404);
+    }
     sendSuccess(res, rows[0]);
   } catch (err) {
-    console.error('Error en detalle CFE:', err);
-    sendError(res, 'Error interno leyendo CFE');
+    console.error('❌ Error en detalle CFE:', err);
+    sendError(res, err.message);
   }
 });
 
