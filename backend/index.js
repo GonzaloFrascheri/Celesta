@@ -335,7 +335,7 @@ app.get('/api/cfes/:id', async (req, res) => {
         cantidad_cfe,
         FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', fecha_caratula) AS fecha_caratula,
         contenido_xml
-      FROM \`${DATASET_ID}.${TABLE_ID}\`
+      FROM \`${DATASET_ID}.${TABLE}\`
       WHERE id = @id
       LIMIT 1
     `;
