@@ -49,12 +49,23 @@ console.log("--- ✅ Firebase Admin SDK inicializado con éxito ---"); // Añad�
 
 // --- Inicializa BigQuery (Versión CORREGIDA) ---
 console.log("--- [Punto 6] Intentando inicializar BigQuery... ---");
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT
+                || process.env.GCLOUD_PROJECT
+                || process.env.GCP_PROJECT
+                || 'celesta-poc';
 const DATASET_ID = process.env.BIGQUERY_DATASET_ID || 'celesta_data';
+const TABLE_ID   = process.env.BIGQUERY_TABLE_ID   || 'cfes';
 if (!DATASET_ID) {
   console.error('❌ BIGQUERY_DATASET_ID no definido');
   process.exit(1);
 }
-const bigquery = new BigQuery({});
+
+const bigquery = new BigQuery({
+  projectId: PROJECT_ID,
+  location:  'us-central1'
+});
+
+const FULL_TABLE = `\`${PROJECT_ID}.${DATASET_ID}.${TABLE_ID}\``;
 
 console.log("--- [Punto 7] ✅ BigQuery inicializado con éxito ---");
 
@@ -295,7 +306,7 @@ app.get('/api/cfes', async (req, res) => {
         moneda,
         nombre_archivo_original,
         fecha_procesamiento
-      FROM \`${DATASET_ID}.${TABLE}\`
+      FROM ${FULL_TABLE}
       ORDER BY fecha_procesamiento DESC
       LIMIT @limit
     `;
@@ -317,46 +328,21 @@ app.get('/api/cfes', async (req, res) => {
 app.get('/api/cfes/:id', async (req, res) => {
   try {
     const sql = `
-      SELECT
-        id,
-        nombre_archivo_original,
-        FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', fecha_procesamiento) AS fecha_procesamiento,
-        emisor_rut,
-        emisor_nombre,
-        receptor_rut,
-        tipo_cfe,
-        serie_cfe,
-        numero_cfe,
-        FORMAT_TIMESTAMP('%Y-%m-%d', fecha_emision) AS fecha_emision,
-        monto_total,
-        moneda,
-        rut_receptor_caratula,
-        ruc_emisor_caratula,
-        cantidad_cfe,
-        FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', fecha_caratula) AS fecha_caratula,
-        contenido_xml
-      FROM \`${DATASET_ID}.${TABLE}\`
+      SELECT *
+      FROM ${FULL_TABLE}
       WHERE id = @id
       LIMIT 1
     `;
     const [rows] = await bigquery.query({
-      query: sql,
-      params: { id: req.params.id },
-      location: 'US'
+      query:    sql,
+      params:   { id: req.params.id },
+      location: 'us-central1'
     });
-
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'CFE no encontrado' });
-    }
-    res.json({ success: true, data: rows[0] });
-
+    if (rows.length === 0) return sendError(res, 'CFE no encontrado', 404);
+    sendSuccess(res, rows[0]);
   } catch (err) {
-    console.error('❌ Error en GET /api/cfes/:id', err);
-    // Devuelve el mensaje real para poder debuggear
-    return res.status(500).json({
-      success: false,
-      error: err.message || 'Error desconocido'
-    });
+    console.error('❌ Error detalle CFE:', err);
+    sendError(res, err.message);
   }
 });
 
