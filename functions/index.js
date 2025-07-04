@@ -16,6 +16,16 @@ exports.procesarCFE = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).send('Método no permitido')
   if (!req.is('application/json')) return res.status(400).send('Se esperaba JSON')
 
+  const ct = req.headers['content-type'] || ''
+  console.log('🔥 Content-Type recibido:', ct)
+
+  // 2) Validar que sea multipart
+  if (!ct.startsWith('multipart/form-data')) {
+    return res
+      .status(400)
+      .send(`Se esperaba multipart/form-data, llegó: ${ct}`)
+  }
+
   const { attachments = [] } = req.body
   if (!Array.isArray(attachments) || attachments.length === 0) {
     return res.status(400).send('Sin adjuntos')
