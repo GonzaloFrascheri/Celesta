@@ -1,121 +1,229 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { coy as syntaxStyle } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import styles from './page.module.css';
 
 interface CFE {
-  id: string
-  nombre_archivo_original: string
-  fecha_procesamiento: string
-  emisor_rut: string | null
-  emisor_nombre: string | null
-  receptor_rut: string | null
-  tipo_cfe: number | null
-  serie_cfe: string | null
-  numero_cfe: number | null
-  fecha_emision: string | null
-  monto_total: number | null
-  moneda: string | null
-  rut_receptor_caratula: string | null
-  ruc_emisor_caratula: string | null
-  cantidad_cfe: number | null
-  fecha_caratula: string | null
-  contenido_xml: string
+  id: string;
+  nombre_archivo_original: string;
+  fecha_procesamiento: { value: string };
+  emisor_rut: string | null;
+  emisor_nombre: string | null;
+  receptor_rut: string | null;
+  tipo_cfe: number | null;
+  serie_cfe: string | null;
+  numero_cfe: number | null;
+  fecha_emision: { value: string } | null;
+  monto_total: number | null;
+  moneda: string | null;
+  rut_receptor_caratula: string | null;
+  ruc_emisor_caratula: string | null;
+  cantidad_cfe: number | null;
+  fecha_caratula: string | null;
+  contenido_xml: string;
 }
 
 export default function CFEPage() {
-  const params = useParams()
-  const id     = params?.id
+  const { id } = useParams();
+  const [cfe, setCfe]     = useState<CFE | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [cfe, setCfe]         = useState<CFE | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState<string| null>(null)
-
+  // 1) Al montar, recupero un solo CFE desde la API
   useEffect(() => {
-    if (!id) return
+    if (!id) return;
+    setLoading(true);
+
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/cfes/${id}`)
       .then(res => res.json())
       .then(json => {
         if (json.success) {
-          setCfe(json.data)
+          setCfe(json.data);
         } else {
-          setError(json.error || 'Error desconocido')
+          setError(json.error || 'CFE no encontrado');
         }
       })
       .catch(err => {
-        console.error(err)
-        setError('Error de conexión')
+        console.error('Error fetch detalle CFE:', err);
+        setError('Error de conexión');
       })
-      .finally(() => setLoading(false))
+      .finally(() => setLoading(false));
+  }, [id]);
 
-  }, [id])
+  // 2) Extraigo líneas de detalle del XML
+  const items = useMemo(() => {
+    if (!cfe) return [];
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(cfe.contenido_xml, 'application/xml');
+      const nodos = Array.from(xmlDoc.getElementsByTagNameNS('*', 'Item'));
+      return nodos.map(node => ({
+        nro:      node.getElementsByTagNameNS('*','NroLinDet')[0]?.textContent,
+        nombre:   node.getElementsByTagNameNS('*','NomItem')[0]?.textContent,
+        cantidad: node.getElementsByTagNameNS('*','Cantidad')[0]?.textContent,
+        precio:   node.getElementsByTagNameNS('*','PrecioUnitario')[0]?.textContent,
+        monto:    node.getElementsByTagNameNS('*','MontoItem')[0]?.textContent,
+      }));
+    } catch {
+      return [];
+    }
+  }, [cfe]);
 
-  if (loading) return <p>Cargando detalle…</p>
-  if (error)   return <p style={{color:'red'}}>❌ {error}</p>
-  if (!cfe)    return <p>No se encontró el CFE.</p>
+  // 3) Función para descargar XML
+  const downloadXml = () => {
+    if (!cfe) return;
+    const blob = new Blob([cfe.contenido_xml], { type: 'application/xml' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = cfe.nombre_archivo_original;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
+  // --- estados de carga/ error / no data ---
+  if (loading) {
+    return <div className={styles.container}><p>Cargando detalle…</p></div>;
+  }
+  if (error) {
+    return <div className={styles.container}><p style={{ color: 'red' }}>❌ {error}</p></div>;
+  }
+  if (!cfe) {
+    return <div className={styles.container}><p>No se encontró el CFE.</p></div>;
+  }
+
+  // --- renderizado final ---
   return (
-    <div style={{ padding: 20 }}>
+    <div className={styles.container}>
+      {/* Breadcrumb */}
+      <nav className={styles.breadcrumb} aria-label="breadcrumbs">
+        <Link href="/home">Inicio</Link><span>/</span>
+        <Link href="/home/cfes">CFEs</Link><span>/</span>
+        <span>Detalle #{cfe.numero_cfe}</span>
+      </nav>
+
       <h1>Detalle CFE #{cfe.numero_cfe}</h1>
-      <table style={{ width:'100%', borderCollapse:'collapse' }}>
-        <tbody>
-          {[
-            ['ID interno',                 cfe.id],
-            ['Archivo origen',             cfe.nombre_archivo_original],
-            ['Procesado el',               cfe.fecha_procesamiento],
-            ['RUT Emisor',                 cfe.emisor_rut],
-            ['Nombre Emisor',              cfe.emisor_nombre],
-            ['RUT Receptor',               cfe.receptor_rut],
-            ['Tipo CFE',                   cfe.tipo_cfe],
-            ['Serie',                      cfe.serie_cfe],
-            ['Número',                     cfe.numero_cfe],
-            ['Fecha emisión',              cfe.fecha_emision],
-            ['Monto total',                cfe.monto_total != null ? `${cfe.monto_total} ${cfe.moneda}` : null],
-            ['Moneda',                     cfe.moneda],
-            ['RUT Receptor (carátula)',    cfe.rut_receptor_caratula || '—'],
-            ['RUC Emisor (carátula)',      cfe.ruc_emisor_caratula   || '—'],
-            ['Cantidad CFE',               cfe.cantidad_cfe          || '—'],
-            ['Fecha Carátula',             cfe.fecha_caratula        || '—'],
-          ].map(([label, value]) => (
-            <tr key={label}>
-              <th style={{
-                  textAlign:'left',
-                  padding: '6px 8px',
-                  borderBottom: '1px solid #eee',
-                  width: '200px'
-                }}>
-                {label}
-              </th>
-              <td style={{
-                  padding: '6px 8px',
-                  borderBottom: '1px solid #eee'
-                }}>
-                {value ?? '—'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
 
-      <details style={{ marginTop: 20 }}>
-        <summary style={{ cursor:'pointer' }}>▶ Ver contenido XML completo</summary>
-        <pre style={{
-          whiteSpace: 'pre-wrap',
-          background: '#f9f9f9',
-          padding: 10,
-          border: '1px solid #ddd',
-          marginTop: 10,
-          maxHeight: '60vh',
-          overflow: 'auto'
-        }}>
-          {cfe.contenido_xml}
-        </pre>
-      </details>
+      {/* Encabezado */}
+      <section className={styles.section}>
+        <h2>Encabezado</h2>
+        <div className={styles.tableResponsive}>
+          <table role="table" aria-label="Datos generales del CFE">
+            <tbody>
+              {[
+                ['ID interno', cfe.id],
+                ['Archivo origen', cfe.nombre_archivo_original],
+                ['Procesado el', new Date(cfe.fecha_procesamiento.value).toLocaleString()],
+              ].map(([k, v]) => (
+                <tr key={k}>
+                  <th>{k}</th>
+                  <td>{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      {/* Un enlace para volver al listado */}
-      <p style={{ marginTop: 20 }}>
-        <Link href="/home/cfes">← Volver al listado de CFEs</Link>
-      </p>
+      {/* Carátula */}
+      <section className={styles.section}>
+        <h2>Carátula</h2>
+        <div className={styles.tableResponsive}>
+          <table role="table" aria-label="Carátula del CFE">
+            <tbody>
+              {[
+                ['RUT Emisor', cfe.emisor_rut],
+                ['Nombre Emisor', cfe.emisor_nombre],
+                ['RUT Receptor', cfe.receptor_rut],
+                ['RUT Receptor (carátula)', cfe.rut_receptor_caratula || '—'],
+                ['RUC Emisor (carátula)', cfe.ruc_emisor_caratula   || '—'],
+                ['Cantidad CFE',            cfe.cantidad_cfe          ?? '—'],
+                ['Fecha Carátula',          cfe.fecha_caratula        ?? '—'],
+              ].map(([k, v]) => (
+                <tr key={k}>
+                  <th>{k}</th>
+                  <td>{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Totales */}
+      <section className={styles.section}>
+        <h2>Totales</h2>
+        <div className={styles.tableResponsive}>
+          <table role="table" aria-label="Totales del CFE">
+            <tbody>
+              {[
+                ['Tipo CFE',     cfe.tipo_cfe],
+                ['Serie',        cfe.serie_cfe],
+                ['Número',       cfe.numero_cfe],
+                ['Fecha emisión', cfe.fecha_emision
+                   ? new Date(cfe.fecha_emision.value).toLocaleDateString()
+                   : '—'],
+                ['Monto total',  cfe.monto_total != null
+                   ? `${cfe.monto_total} ${cfe.moneda}` : '—'],
+              ].map(([k, v]) => (
+                <tr key={k} className={k === 'Monto total' ? styles.highlight : ''}>
+                  <th>{k}</th>
+                  <td>{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Líneas de detalle */}
+      {items.length > 0 && (
+        <section className={styles.section}>
+          <h2>Líneas de detalle</h2>
+          <div className={styles.tableResponsive}>
+            <table role="table" aria-label="Detalle de ítems">
+              <thead>
+                <tr>
+                  <th>Nro</th><th>Ítem</th><th>Cantidad</th><th>Precio unit.</th><th>Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((it, i) => (
+                  <tr key={i}>
+                    <td data-label="Nro">{it.nro}</td>
+                    <td data-label="Ítem">{it.nombre}</td>
+                    <td data-label="Cantidad">{it.cantidad}</td>
+                    <td data-label="Precio unit.">{it.precio}</td>
+                    <td data-label="Monto">{it.monto}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Contenido XML */}
+      <section className={styles.section}>
+        <h2>Contenido XML</h2>
+        <div className={styles.xmlContainer}>
+          <SyntaxHighlighter language="xml" style={syntaxStyle} showLineNumbers>
+            {cfe.contenido_xml}
+          </SyntaxHighlighter>
+        </div>
+      </section>
+
+      {/* Descargar al final */}
+      <div className={styles.actions}>
+        <button onClick={downloadXml}>📥 Descargar XML</button>
+      </div>
+
+      {/* Volver */}
+      <p><Link href="/home/cfes">← Volver al listado</Link></p>
     </div>
-  )
+  );
 }

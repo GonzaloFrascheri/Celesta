@@ -1,0 +1,130 @@
+/* page.module.css */
+.container {
+  padding: 1.5rem;
+}
+.breadcrumb {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+.breadcrumb a {
+  color: #0070f3;
+  text-decoration: none;
+}
+.breadcrumb span {
+  margin: 0 0.5rem;
+}
+.title {
+  margin-bottom: 1rem;
+  margin: 0 0.5rem;
+}
+.section {
+  margin-bottom: 2rem;
+}
+.section h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.25rem;
+}
+.highlight {
+  background: #f0f8ff;
+}
+.actions {
+  margin-top: 1rem;
+}
+.actions button {
+  margin-right: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: #0070f3;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.pageContainer {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.xmlContainer {
+  margin-top: 1rem;
+  max-height: 50vh;
+  overflow: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.listTitle {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.listControls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.searchInput {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Lista de items */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.listItem:first-child {
+  border-top: none;
+}
+
+.detailLink {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+@media (max-width: 600px) {
+  .tableResponsive, .tableResponsive thead, .tableResponsive tbody,
+  .tableResponsive th, .tableResponsive td, .tableResponsive tr {
+    display: block;
+  }
+  .tableResponsive th {
+    background: #fafafa;
+  }
+  .tableResponsive td {
+    padding-left: 50%;
+    position: relative;
+  }
+  .tableResponsive td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    width: 45%;
+    padding-left: 0.5rem;
+    font-weight: bold;
+    background: #fafafa;
+  }
+}

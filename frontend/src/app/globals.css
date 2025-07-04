@@ -19,6 +19,22 @@
   }
 }
 
+h1 {
+  margin-bottom: 1rem;
+}
+
+/* tablas genéricas: */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+th, td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
 body {
   background-color: #f0f2f5; /* Un gris claro, muy común en páginas de login */
   margin: 0;
