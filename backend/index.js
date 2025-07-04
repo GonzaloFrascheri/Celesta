@@ -69,8 +69,6 @@ const FULL_TABLE = `\`${PROJECT_ID}.${DATASET_ID}.${TABLE_ID}\``;
 
 console.log("--- [Punto 7] ✅ BigQuery inicializado con éxito ---");
 
-const TABLE   = 'cfes';
-
 // --- Helpers ---
 const sendSuccess = (res, data, code = 200) => res.status(code).json({ success: true, data });
 const sendError   = (res, msg,  code = 500) => res.status(code).json({ success: false, error: msg });
@@ -294,30 +292,19 @@ app.get('/api/cfes', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit, 10) || 20;
     const sql = `
-      SELECT
-        id,
-        emisor_nombre,
-        receptor_rut,
-        tipo_cfe,
-        serie_cfe,
-        numero_cfe,
-        fecha_emision,
-        monto_total,
-        moneda,
-        nombre_archivo_original,
-        fecha_procesamiento
+      SELECT *
       FROM ${FULL_TABLE}
       ORDER BY fecha_procesamiento DESC
       LIMIT @limit
     `;
     const [rows] = await bigquery.query({
-      query: sql,
-      params: { limit }
+      query:    sql,
+      params:   { limit },
+      location: 'us-central1'
     });
-    // devolvemos la misma forma que tus otros endpoints:
     sendSuccess(res, { items: rows, nextPageToken: null });
   } catch (err) {
-    console.error('❌ Error leyendo CFEs:', err);
+    console.error('Error listando CFEs:', err);
     sendError(res, err.message);
   }
 });
@@ -336,12 +323,12 @@ app.get('/api/cfes/:id', async (req, res) => {
     const [rows] = await bigquery.query({
       query:    sql,
       params:   { id: req.params.id },
-      location: 'us-central1'
+      location: 'us-central1'      // ← Y acá también
     });
     if (rows.length === 0) return sendError(res, 'CFE no encontrado', 404);
     sendSuccess(res, rows[0]);
   } catch (err) {
-    console.error('❌ Error detalle CFE:', err);
+    console.error('Error detalle CFE:', err);
     sendError(res, err.message);
   }
 });
