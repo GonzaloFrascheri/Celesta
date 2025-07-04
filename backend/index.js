@@ -312,27 +312,50 @@ app.get('/api/cfes', async (req, res) => {
 });
 
 // DETALLE: GET /api/cfes/:id
+// en tu Express (functions/index.js o backend/index.js)
+
 app.get('/api/cfes/:id', async (req, res) => {
   try {
     const sql = `
-      SELECT *
-      FROM \`${DATASET_ID}.${TABLE}\`
+      SELECT
+        id,
+        nombre_archivo_original,
+        FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', fecha_procesamiento) AS fecha_procesamiento,
+        emisor_rut,
+        emisor_nombre,
+        receptor_rut,
+        tipo_cfe,
+        serie_cfe,
+        numero_cfe,
+        FORMAT_TIMESTAMP('%Y-%m-%d', fecha_emision) AS fecha_emision,
+        monto_total,
+        moneda,
+        rut_receptor_caratula,
+        ruc_emisor_caratula,
+        cantidad_cfe,
+        FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', fecha_caratula) AS fecha_caratula,
+        contenido_xml
+      FROM \`${DATASET_ID}.${TABLE_ID}\`
       WHERE id = @id
       LIMIT 1
     `;
     const [rows] = await bigquery.query({
       query: sql,
-      params: { id: req.params.id }
+      params: { id: req.params.id },
+      location: 'US'
     });
+
     if (rows.length === 0) {
-      return sendError(res, 'CFE no encontrado', 404);
+      return res.status(404).json({ success: false, error: 'CFE no encontrado' });
     }
-    sendSuccess(res, rows[0]);
+    res.json({ success: true, data: rows[0] });
+
   } catch (err) {
-    console.error('❌ Error en detalle CFE:', err);
-    sendError(res, err.message);
+    console.error('Error en detalle CFE:', err);
+    res.status(500).json({ success: false, error: 'Error interno leyendo CFE' });
   }
 });
+
 
 /** COMPRAS */
 // CREATE
