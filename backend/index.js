@@ -351,8 +351,12 @@ app.get('/api/cfes/:id', async (req, res) => {
     res.json({ success: true, data: rows[0] });
 
   } catch (err) {
-    console.error('Error en detalle CFE:', err);
-    res.status(500).json({ success: false, error: 'Error interno leyendo CFE' });
+    console.error('❌ Error en GET /api/cfes/:id', err);
+    // Devuelve el mensaje real para poder debuggear
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'Error desconocido'
+    });
   }
 });
 
