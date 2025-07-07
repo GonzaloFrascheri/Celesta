@@ -1,9 +1,9 @@
 {
   "name": "functions",
   "version": "1.0.0",
-  "main": "function.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node function.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^7.0.0",
