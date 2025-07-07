@@ -1,17 +1,24 @@
 steps:
-  - id: 'deploy-function'
-    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - id: 'build-and-push'
+    name: 'gcr.io/kaniko-project/executor:latest'
+    args:
+      - --context=dir://.
+      - --dockerfile=Dockerfile
+      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA
+      - --cache=true
+
+  - id: 'deploy-to-run'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
     entrypoint: bash
     args:
-      - "-c"
+      - -c
       - |
-        gcloud functions deploy procesador-cfes \
-          --runtime nodejs20 \
-          --trigger-http \
-          --source=. \
-          --entry-point=procesadorCFES \
-          --set-env-vars=BIGQUERY_DATASET_ID=celesta_data,BIGQUERY_TABLE_ID=cfes \
-          --region=us-central1 \
-          --allow-unauthenticated
+        gcloud run deploy procesador-cfes \
+          --image us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA \
+          --region us-central1 \
+          --platform managed \
+          --allow-unauthenticated \
+          --set-env-vars BIGQUERY_DATASET_ID=$BIGQUERY_DATASET_ID,BIGQUERY_TABLE_ID=$BIGQUERY_TABLE_ID
+
 options:
   logging: CLOUD_LOGGING_ONLY

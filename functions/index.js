@@ -1,18 +1,18 @@
-const express = require('express');
-const Busboy = require('busboy');
+require('dotenv').config();
+const express     = require('express');
+const Busboy      = require('busboy');
 const { XMLParser } = require('fast-xml-parser');
 const { v4: uuidv4 } = require('uuid');
 const { BigQuery } = require('@google-cloud/bigquery');
-require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 8080;
 
+const PORT       = process.env.PORT || 8080;
 const PROJECT_ID = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
 const DATASET_ID = process.env.BIGQUERY_DATASET_ID || 'celesta_data';
 const TABLE_ID   = process.env.BIGQUERY_TABLE_ID   || 'cfes';
 
-const bigquery = new BigQuery({ projectId: PROJECT_ID });
+const bigquery  = new BigQuery({ projectId: PROJECT_ID });
 const xmlParser = new XMLParser({ ignoreAttributes:false, attributeNamePrefix: '' });
 
 // Health check simple
@@ -105,4 +105,6 @@ app.post('/api/inbound', (req, res) => {
   req.pipe(busboy);
 });
 
-exports.procesadorCFES = app;
+app.listen(PORT, () => {
+  console.log(`🚀 Procesador CFE escuchando en puerto ${PORT}`);
+});
