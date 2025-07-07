@@ -31,7 +31,7 @@ exports.procesarCFE = (req, res) => {
       .send(`Se esperaba multipart/form-data, llegó: ${ct}`);
   }
 
-  const busboy = new Busboy({ headers: req.headers });
+  const busboy = Busboy({ headers: req.headers });
   const attachments = [];
 
   busboy.on('file', (fieldname, fileStream, info) => {
