@@ -2,9 +2,9 @@ steps:
   - id: build-and-push
     name: gcr.io/kaniko-project/executor:latest
     args:
-      - --context=.
+      - --context=backend # <-- ¡Este es el cambio clave!
       - --dockerfile=Dockerfile # Busca el Dockerfile en el directorio actual (backend)
-      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA
+      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/api:$SHORT_SHA
       - --cache=true
 
   - id: deploy-to-run
@@ -13,8 +13,8 @@ steps:
     args:
       - "-c"
       - |
-        gcloud run deploy procesador-cfes \
-          --image us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA \
+        gcloud run deploy celesta-backend \
+          --image us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/api:$SHORT_SHA \
           --region us-central1 \
           --platform managed \
           --allow-unauthenticated \
