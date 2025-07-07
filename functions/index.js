@@ -105,6 +105,4 @@ app.post('/api/inbound', (req, res) => {
   req.pipe(busboy);
 });
 
-app.listen(PORT, () => {
-  console.log(`Procesador escuchando en puerto ${PORT}`);
-});
+exports.procesadorCFES = app;
