@@ -1,24 +1,38 @@
-require('dotenv').config();
-const express     = require('express');
-const Busboy      = require('busboy');
-const { XMLParser } = require('fast-xml-parser');
-const { v4: uuidv4 } = require('uuid');
-const { BigQuery } = require('@google-cloud/bigquery');
+try {
+  console.log('🚀 Iniciando servicio procesador-cfes...');
+  require('dotenv').config();
+  const express     = require('express');
+  const Busboy      = require('busboy');
+  const { XMLParser } = require('fast-xml-parser');
+  const { v4: uuidv4 } = require('uuid');
+  const { BigQuery } = require('@google-cloud/bigquery');
 
-const app = express();
+  console.log('✅ Dependencias cargadas.');
 
-const PROJECT_ID = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
-const DATASET_ID = process.env.BIGQUERY_DATASET_ID || 'celesta_data';
-const TABLE_ID   = process.env.BIGQUERY_TABLE_ID   || 'cfes';
+  const app = express();
 
-const bigquery  = new BigQuery({ projectId: PROJECT_ID });
-const xmlParser = new XMLParser({ ignoreAttributes:false, attributeNamePrefix: '' });
+  const PROJECT_ID = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
+  const DATASET_ID = process.env.BIGQUERY_DATASET_ID || 'celesta_data';
+  const TABLE_ID   = process.env.BIGQUERY_TABLE_ID   || 'cfes';
 
-// Health check simple
-app.get('/', (req, res) => res.status(200).send('Alive'));
+  console.log(`➡️  PROJECT_ID: ${PROJECT_ID}`);
+  console.log(`➡️  DATASET_ID: ${DATASET_ID}`);
+  console.log(`➡️  TABLE_ID: ${TABLE_ID}`);
 
-// Tu endpoint principal:
-app.post('/api/inbound', (req, res) => {
+  if (!PROJECT_ID) {
+    throw new Error('El PROJECT_ID no está definido. Asegúrate de que la variable de entorno GCP_PROJECT o GCLOUD_PROJECT esté disponible.');
+  }
+
+  const bigquery  = new BigQuery({ projectId: PROJECT_ID });
+  const xmlParser = new XMLParser({ ignoreAttributes:false, attributeNamePrefix: '' });
+
+  console.log('✅ Cliente de BigQuery y Parser XML inicializados.');
+
+  // Health check simple
+  app.get('/', (req, res) => res.status(200).send('Alive'));
+
+  // Tu endpoint principal:
+  app.post('/api/inbound', (req, res) => {
   console.log('📥 LLEGÓ', req.method, 'a', req.path);
   console.log('🔥 Content-Type:', req.headers['content-type'] || '');
 
@@ -104,7 +118,13 @@ app.post('/api/inbound', (req, res) => {
   req.pipe(busboy);
 });
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`🚀 Procesador escuchando en puerto ${PORT}`);
-});
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => {
+    console.log(`🚀 Procesador escuchando en puerto ${PORT}`);
+    console.log('✅ Servicio iniciado y listo para recibir peticiones.');
+  });
+
+} catch (error) {
+  console.error('❌ Error fatal durante la inicialización del servicio:', error);
+  process.exit(1);
+}
