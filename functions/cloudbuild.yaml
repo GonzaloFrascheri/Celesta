@@ -1,3 +1,8 @@
+# functions/cloudbuild.yaml
+substitutions:
+  _BIGQUERY_DATASET_ID: "celesta_data"
+  _BIGQUERY_TABLE_ID:   "cfes"
+
 steps:
   - id: 'build-and-push'
     name: 'gcr.io/kaniko-project/executor:latest'
@@ -18,7 +23,9 @@ steps:
           --region us-central1 \
           --platform managed \
           --allow-unauthenticated \
-          --set-env-vars BIGQUERY_DATASET_ID=$BIGQUERY_DATASET_ID,BIGQUERY_TABLE_ID=$BIGQUERY_TABLE_ID
+          --set-env-vars= \
+BIGQUERY_DATASET_ID=${_BIGQUERY_DATASET_ID},\
+BIGQUERY_TABLE_ID=${_BIGQUERY_TABLE_ID}
 
 options:
   logging: CLOUD_LOGGING_ONLY
