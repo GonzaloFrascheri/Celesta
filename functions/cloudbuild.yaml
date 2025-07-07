@@ -13,5 +13,7 @@ steps:
           --set-env-vars=BIGQUERY_DATASET_ID=celesta_data,BIGQUERY_TABLE_ID=cfes \
           --region=us-central1 \
           --allow-unauthenticated
+          --no-gen2
+          --verbosity=debug
 options:
   logging: CLOUD_LOGGING_ONLY
