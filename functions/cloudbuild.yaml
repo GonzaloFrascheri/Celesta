@@ -28,3 +28,6 @@ steps:
       - '--allow-unauthenticated'
       - '--set-env-vars'
       - 'BIGQUERY_DATASET_ID=celesta_data,BIGQUERY_TABLE_ID=cfes'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
