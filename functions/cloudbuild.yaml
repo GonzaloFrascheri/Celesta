@@ -1,0 +1,30 @@
+# Este archivo construye y despliega el microservicio 'procesador-cfes' a Cloud Run.
+
+steps:
+  # 1. Construye la imagen de Docker usando el Dockerfile en la carpeta /functions
+  #    y la sube a Artifact Registry.
+  - id: 'build-and-push-procesador-cfes'
+    name: 'gcr.io/kaniko-project/executor:latest'
+    args:
+      - --context=functions # Usa la carpeta 'functions' como contexto de construcción
+      - --dockerfile=functions/Dockerfile # Ruta al Dockerfile desde la raíz del repo
+      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA
+      - --cache=true
+
+  # 2. Despliega la imagen recién construida a Cloud Run.
+  - id: 'deploy-procesador-cfes'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'procesador-cfes' # El nombre de tu servicio en Cloud Run
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'BIGQUERY_DATASET_ID=celesta_data,BIGQUERY_TABLE_ID=cfes'
