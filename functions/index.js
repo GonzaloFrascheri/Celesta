@@ -7,7 +7,6 @@ const { BigQuery } = require('@google-cloud/bigquery');
 
 const app = express();
 
-const PORT       = process.env.PORT || 8080;
 const PROJECT_ID = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
 const DATASET_ID = process.env.BIGQUERY_DATASET_ID || 'celesta_data';
 const TABLE_ID   = process.env.BIGQUERY_TABLE_ID   || 'cfes';
@@ -105,6 +104,7 @@ app.post('/api/inbound', (req, res) => {
   req.pipe(busboy);
 });
 
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`🚀 Procesador CFE escuchando en puerto ${PORT}`);
+  console.log(`🚀 Procesador escuchando en puerto ${PORT}`);
 });
