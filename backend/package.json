@@ -12,6 +12,8 @@
     "dotenv": "^16.4.5",
     "firebase-admin": "^13.3.0",          
     "@google-cloud/bigquery": "^8.1.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "busboy": "^1.6.0",
+    "fast-xml-parser": "^4.2.5"
   }
 }
