@@ -2,8 +2,8 @@ steps:
   - id: 'build-and-push-frontend'
     name: 'gcr.io/kaniko-project/executor:latest'
     args:
-      - --context=dir://.
-      - --dockerfile=Dockerfile
+      - --context=dir://frontend
+      - --dockerfile=frontend/Dockerfile
       - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-frontend/frontend:$SHORT_SHA
       - --cache=true
       - --build-arg=NEXT_PUBLIC_FIREBASE_API_KEY=$_NEXT_PUBLIC_FIREBASE_API_KEY
