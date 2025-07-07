@@ -1,4 +1,13 @@
+# functions/cloudbuild.yaml
 steps:
+  - id: 'build-and-push-functions'
+    name: 'gcr.io/kaniko-project/executor:latest'
+    args:
+      - --context=dir://.
+      - --dockerfile=Dockerfile
+      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/functions:$SHORT_SHA
+      - --cache=true
+
   - id: 'deploy-functions'
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -6,10 +15,14 @@ steps:
       - run
       - deploy
       - procesador-cfes
-      - --source=.
-      - --region=us-central1
-      - --platform=managed
+      - --image
+      - us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/functions:$SHORT_SHA
+      - --region
+      - us-central1
+      - --platform
+      - managed
       - --allow-unauthenticated
+    waitFor: ['build-and-push-functions']
 
 options:
   logging: CLOUD_LOGGING_ONLY
