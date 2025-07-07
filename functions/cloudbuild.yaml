@@ -7,8 +7,11 @@ steps:
   - id: build-and-push
     name: gcr.io/kaniko-project/executor:latest
     args:
-      - --context=dir://.
-      - --dockerfile=Dockerfile
+      # le decimos a Kaniko que el contexto está en functions/
+      - --context=dir://functions
+      # y que el Dockerfile también está en functions/
+      - --dockerfile=functions/Dockerfile
+      # tu repositorio y tag
       - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA
       - --cache=true
 
@@ -19,9 +22,9 @@ steps:
       - "-c"
       - |
         gcloud run deploy procesador-cfes \
-          --image us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA \
-          --region us-central1 \
-          --platform managed \
+          --image=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA \
+          --region=us-central1 \
+          --platform=managed \
           --allow-unauthenticated \
           --set-env-vars=BIGQUERY_DATASET_ID=${_BIGQUERY_DATASET_ID},BIGQUERY_TABLE_ID=${_BIGQUERY_TABLE_ID}
 
