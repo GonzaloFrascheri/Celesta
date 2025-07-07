@@ -1,5 +1,7 @@
 {
-  "main": "index.js",
+  "name": "functions",
+  "version": "1.0.0",
+  "main": "function.js",
   "scripts": {
     "start": "node function.js"
   },
