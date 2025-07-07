@@ -8,7 +8,7 @@ steps:
         gcloud functions deploy procesador-cfes \
           --runtime nodejs20 \
           --trigger-http \
-          --source=functions
+          --source=. \
           --entry-point=procesadorCFES \
           --set-env-vars=BIGQUERY_DATASET_ID=celesta_data,BIGQUERY_TABLE_ID=cfes \
           --region=us-central1 \
