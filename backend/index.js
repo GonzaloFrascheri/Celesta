@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
+const Busboy = require('busboy');
+const { XMLParser } = require('fast-xml-parser');
 const { BigQuery } = require('@google-cloud/bigquery');
 const { v4: uuidv4 } = require('uuid');
 
@@ -66,6 +68,8 @@ const bigquery = new BigQuery({
 });
 
 const FULL_TABLE = `\`${PROJECT_ID}.${DATASET_ID}.${TABLE_ID}\``;
+
+const xmlParser = new XMLParser({ ignoreAttributes:false, attributeNamePrefix: '' });
 
 console.log("--- [Punto 7] ✅ BigQuery inicializado con éxito ---");
 
@@ -285,6 +289,71 @@ app.post('/api/procesar-compras-pendientes', async (req, res) => {
       console.error('Error fatal en el procesamiento por lotes:', error);
       sendError(res, 'Error crítico durante el procesamiento por lotes.');
     }
+});
+
+/** CFE Inbound Processing */
+app.post('/api/inbound', (req, res) => {
+  console.log('📥 LLEGÓ CFE', req.method, 'a', req.path);
+  console.log('🔥 Content-Type:', req.headers['content-type'] || '');
+
+  if (req.method !== 'POST') {
+    return res.status(405).send('Método no permitido');
+  }
+
+  const ct = req.headers['content-type'] || '';
+  if (!ct.startsWith('multipart/form-data')) {
+    return res
+      .status(400)
+      .send(`Se esperaba multipart/form-data, llegó: ${ct}`);
+  }
+
+  const busboy = Busboy({ headers: req.headers });
+  const attachments = [];
+
+  busboy.on('file', (fieldname, fileStream, info) => {
+    const { filename } = info;
+    if (!filename.toLowerCase().endsWith('.xml')) {
+      console.log(`Archivo omitido (no es XML): ${filename}`);
+      return fileStream.resume();
+    }
+    let buffer = '';
+    fileStream.on('data', chunk => buffer += chunk.toString());
+    fileStream.on('end', () => {
+      attachments.push({ filename, content: buffer });
+    });
+  });
+
+  busboy.on('error', err => {
+    console.error('Busboy error:', err);
+    sendError(res, 'Error leyendo adjuntos');
+  });
+
+  busboy.on('finish', async () => {
+    if (attachments.length === 0) {
+      console.warn('⚠️ Sin adjuntos XML.');
+      return sendError(res, 'Sin adjuntos XML', 400);
+    }
+
+    try {
+      const rows = attachments.map(att => {
+        const doc = xmlParser.parse(att.content);
+        const car = doc?.EnvioCFE_entreEmpresas?.Caratula || {};
+        const idDoc = doc?.EnvioCFE_entreEmpresas?.CFE_Adenda?.['ns0:CFE']?.ns0?.eFact?.Encabezado?.IdDoc || {};
+
+        return { id: uuidv4(), nombre_archivo_original: att.filename, fecha_procesamiento: new Date().toISOString(), emisor_rut: car.RUCEmisor || null, emisor_nombre: car.RznSoc || null, receptor_rut: car.RutReceptor || null, tipo_cfe: idDoc.TipoCFE ? Number(idDoc.TipoCFE) : null, serie_cfe: idDoc.Serie || null, numero_cfe: idDoc.Nro ? Number(idDoc.Nro) : null, fecha_emision: idDoc.FchEmis ? new Date(idDoc.FchEmis).toISOString() : null, monto_total: car.CantCFE || null, moneda: car.Moneda || null, contenido_xml: att.content };
+      });
+
+      await bigquery.dataset(DATASET_ID).table(TABLE_ID).insert(rows, { ignoreUnknownValues: true, skipInvalidRows: true });
+
+      console.log(`✅ Insertadas ${rows.length} filas de CFE.`);
+      sendSuccess(res, { message: `Procesados ${rows.length} CFE(s).` });
+    } catch (err) {
+      console.error('❌ Error en inserción de BigQuery para CFE:', err);
+      sendError(res, 'Error interno insertando CFE en BigQuery.');
+    }
+  });
+
+  req.pipe(busboy);
 });
 
 /** CFEs */

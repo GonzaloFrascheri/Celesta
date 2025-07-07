@@ -1,29 +1,24 @@
 steps:
-  - id: 'build-and-push-backend'
-    name: 'gcr.io/kaniko-project/executor:latest'
+  - id: build-and-push
+    name: gcr.io/kaniko-project/executor:latest
     args:
-      - --context=dir://backend
-      - --dockerfile=backend/Dockerfile
-      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA
+      - --context=.
+      - --dockerfile=Dockerfile # Busca el Dockerfile en el directorio actual (backend)
+      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA
       - --cache=true
 
-  - id: 'deploy-backend'
-    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+  - id: deploy-to-run
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
+    entrypoint: bash
     args:
-      - run
-      - deploy
-      - celesta-backend
-      - --image
-      - us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA
-      - --region
-      - us-central1
-      - --platform
-      - managed
-      - --allow-unauthenticated
-      - --remove-env-vars=BIGQUERY_DATASET_ID
-      - --set-secrets=FIREBASE_SERVICE_ACCOUNT_KEY_JSON=firebase-service-account-json:latest,BIGQUERY_DATASET_ID=bigquery-dataset-id:latest
-    waitFor: ['build-and-push-backend']
+      - "-c"
+      - |
+        gcloud run deploy procesador-cfes \
+          --image us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA \
+          --region us-central1 \
+          --platform managed \
+          --allow-unauthenticated \
+          --set-env-vars BIGQUERY_DATASET_ID=celesta_data,BIGQUERY_TABLE_ID=cfes
 
 options:
   logging: CLOUD_LOGGING_ONLY
