@@ -1,9 +1,12 @@
-// index.js  (o el entrypoint de tu Cloud Run)
-require('dotenv').config();
-const { BigQuery } = require('@google-cloud/bigquery');
-const Busboy      = require('busboy');
+const express = require('express');
+const Busboy = require('busboy');
 const { XMLParser } = require('fast-xml-parser');
 const { v4: uuidv4 } = require('uuid');
+const { BigQuery } = require('@google-cloud/bigquery');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 8080;
 
 const PROJECT_ID = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
 const DATASET_ID = process.env.BIGQUERY_DATASET_ID || 'celesta_data';
@@ -12,14 +15,14 @@ const TABLE_ID   = process.env.BIGQUERY_TABLE_ID   || 'cfes';
 const bigquery = new BigQuery({ projectId: PROJECT_ID });
 const xmlParser = new XMLParser({ ignoreAttributes:false, attributeNamePrefix: '' });
 
-exports.procesarCFE = (req, res) => {
+// Health check simple
+app.get('/', (req, res) => res.status(200).send('Alive'));
+
+// Tu endpoint principal:
+app.post('/api/inbound', (req, res) => {
   console.log('📥 LLEGÓ', req.method, 'a', req.path);
   console.log('🔥 Content-Type:', req.headers['content-type'] || '');
 
-  // health check
-  if (req.method === 'GET') {
-    return res.status(200).send('Alive');
-  }
   if (req.method !== 'POST') {
     return res.status(405).send('Método no permitido');
   }
@@ -71,7 +74,6 @@ exports.procesarCFE = (req, res) => {
           id:                      uuidv4(),
           nombre_archivo_original: att.filename,
           fecha_procesamiento:     new Date().toISOString(),
-          // ajusta según tags que encuentres:
           emisor_rut:              car.RUCEmisor || null,
           emisor_nombre:           car.RznSoc    || null,
           receptor_rut:            car.RutReceptor || null,
@@ -100,7 +102,9 @@ exports.procesarCFE = (req, res) => {
     }
   });
 
-  // ¡MUY IMPORTANTE! pasamos el request al parser
   req.pipe(busboy);
-};
-   
+});
+
+app.listen(PORT, () => {
+  console.log(`Procesador escuchando en puerto ${PORT}`);
+});
