@@ -1,0 +1,15 @@
+steps:
+  - id: 'deploy-functions'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - procesador-cfes
+      - --source=.
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+
+options:
+  logging: CLOUD_LOGGING_ONLY

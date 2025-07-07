@@ -1,0 +1,29 @@
+steps:
+  - id: 'build-and-push-backend'
+    name: 'gcr.io/kaniko-project/executor:latest'
+    args:
+      - --context=dir://.
+      - --dockerfile=Dockerfile
+      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA
+      - --cache=true
+
+  - id: 'deploy-backend'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - celesta-backend
+      - --image
+      - us-central1-docker.pkg.dev/$PROJECT_ID/celesta-backend/backend:$SHORT_SHA
+      - --region
+      - us-central1
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --remove-env-vars=BIGQUERY_DATASET_ID
+      - --set-secrets=FIREBASE_SERVICE_ACCOUNT_KEY_JSON=firebase-service-account-json:latest,BIGQUERY_DATASET_ID=bigquery-dataset-id:latest
+    waitFor: ['build-and-push-backend']
+
+options:
+  logging: CLOUD_LOGGING_ONLY
