@@ -71,5 +71,19 @@ steps:
     - --set-secrets=FIREBASE_SERVICE_ACCOUNT_KEY_JSON=firebase-service-account-json:latest,BIGQUERY_DATASET_ID=bigquery-dataset-id:latest
     waitFor: ['build-and-push-backend']
 
+  # 5) FUNCTIONS: deploy directo a Cloud Run desde código fuente
+  - id: 'deploy-functions'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - procesador-cfes
+      - --source=functions
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+    waitFor: ['deploy-backend']
+
 options:
   logging: CLOUD_LOGGING_ONLY
