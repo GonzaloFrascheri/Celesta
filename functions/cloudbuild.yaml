@@ -4,28 +4,26 @@ substitutions:
   _BIGQUERY_TABLE_ID:   "cfes"
 
 steps:
-  - id: 'build-and-push'
-    name: 'gcr.io/kaniko-project/executor:latest'
+  - id: build-and-push
+    name: gcr.io/kaniko-project/executor:latest
     args:
       - --context=dir://.
       - --dockerfile=Dockerfile
       - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA
       - --cache=true
 
-  - id: 'deploy-to-run'
-    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+  - id: deploy-to-run
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
     entrypoint: bash
     args:
-      - -c
+      - "-c"
       - |
         gcloud run deploy procesador-cfes \
           --image us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA \
           --region us-central1 \
           --platform managed \
           --allow-unauthenticated \
-          --set-env-vars= \
-BIGQUERY_DATASET_ID=${_BIGQUERY_DATASET_ID},\
-BIGQUERY_TABLE_ID=${_BIGQUERY_TABLE_ID}
+          --set-env-vars=BIGQUERY_DATASET_ID=${_BIGQUERY_DATASET_ID},BIGQUERY_TABLE_ID=${_BIGQUERY_TABLE_ID}
 
 options:
   logging: CLOUD_LOGGING_ONLY
