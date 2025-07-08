@@ -9,7 +9,7 @@ steps:
       - --context=functions # Usa la carpeta 'functions' como contexto de construcción
       - --dockerfile=functions/Dockerfile # Ruta al Dockerfile desde la raíz del repo
       - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/celesta-functions/procesador-cfes:$SHORT_SHA
-      - --no-cache
+      - --cache=false
 
   # 2. Despliega la imagen recién construida a Cloud Run.
   - id: 'deploy-procesador-cfes'
