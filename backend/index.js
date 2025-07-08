@@ -406,7 +406,7 @@ app.get('/api/cfes/:id', async (req, res) => {
 /** COMPRAS */
 // CREATE
 app.post('/api/compras', async (req, res) => {
-  const { proveedor_id, detalles } = req.body;
+  const { proveedor_id, folio, fecha_emision, centro_de_costos, detalles } = req.body;
   if (!proveedor_id || !Array.isArray(detalles) || detalles.length === 0) {
     return sendError(res, 'Se requiere proveedor_id y detalles', 400);
   }
@@ -414,16 +414,19 @@ app.post('/api/compras', async (req, res) => {
   try {
     // 1) Inserto la compra
     const compraId = uuidv4();
-    const now = new Date().toISOString().slice(0,19).replace('T',' ');
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const montoTotal = detalles.reduce((sum, d) =>
       sum + (d.cantidad * d.precio_neto_unitario), 0
     );
     const nuevaCompra = {
-      id:           compraId,
-      proveedor_id: proveedor_id,
-      created_at:   now,
-      monto_total:  montoTotal,
-      estado_ml:    'PENDIENTE'
+      id:                 compraId,
+      proveedor_id:       proveedor_id,
+      folio:              folio || null,
+      fecha_emision:      fecha_emision ? new Date(fecha_emision).toISOString().slice(0, 19).replace('T', ' ') : now,
+      centro_de_costos:   centro_de_costos || null,
+      created_at:         now,
+      monto_total:        montoTotal,
+      estado_ml:          'PENDIENTE'
     };
     await bigquery
       .dataset(DATASET_ID)
