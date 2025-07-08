@@ -120,6 +120,7 @@ try {
             nombre_archivo_original: att.filename,
             fecha_procesamiento: new Date().toISOString(),
             contenido_xml: att.content,
+            estado_documento: null,
             tipo_documento: null,
             emisor_rut: null,
             emisor_nombre: null,
@@ -174,6 +175,16 @@ try {
             row.serie_cfe = detalleAck.Serie || null;
             row.numero_cfe = detalleAck.NroCFE ? Number(detalleAck.NroCFE) : null;
             row.fecha_emision = detalleAck.FechaCFE ? new Date(detalleAck.FechaCFE).toISOString() : null;
+            // Los ACKs no tienen monto, nombre de emisor ni detalle. Se quedan en null/vacío.
+          } else if (doc.ACKSobre) {
+            row.tipo_documento = 'ACK_SOBRE';
+            const ackSobre = doc.ACKSobre;
+            const caratula = ackSobre.Caratula || {};
+            const detalle = ackSobre.Detalle || {};
+
+            row.emisor_rut = caratula.RUCEmisor || null;
+            row.receptor_rut = caratula.RUCReceptor || null;
+            row.estado_documento = detalle.Estado || null;
           }
 
           return row;
