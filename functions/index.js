@@ -24,9 +24,9 @@ try {
   }
 
   const bigquery = new BigQuery({ projectId: PROJECT_ID });
-  const xmlParser = new XMLParser({ // Opciones de parser más robustas
+  const xmlParser = new XMLParser({
     ignoreAttributes: false,
-    removeNSPrefix: true, // Elimina prefijos como 'ns0:' de las etiquetas
+    ignoreNameSpace: true, // Opción más robusta para ignorar todos los namespaces
     parseTagValue: false, // Mantiene todos los valores como strings
     // Evita procesar las partes más grandes y complejas que no necesitamos
     stopNodes: ["*.Signature", "*.X509Certificate"]
@@ -83,27 +83,37 @@ try {
     try {
       const rows = attachments.map(att => {
         const doc = xmlParser.parse(att.content);
-        
-        // Para depurar, puedes descomentar la siguiente línea y revisar los logs de Cloud Run
-        // console.log(JSON.stringify(doc, null, 2));
 
         // Lógica de extracción más segura para manejar el anidamiento y la estructura
         const envio = doc.EnvioCFE_entreEmpresas?.EnvioCFE_entreEmpresas || doc.EnvioCFE_entreEmpresas || {};
         const caratula = envio.Caratula || {};
         const cfe = envio.CFE_Adenda?.CFE || {};
-        const encabezado = cfe.eFact?.Encabezado || {};
-        const idDoc = encabezado?.IdDoc || {};
-        const emisor = encabezado?.Emisor || {};
-        const totales = encabezado?.Totales || {};
+        const eFact = cfe.eFact || {};
+        const encabezado = eFact.Encabezado || {};
+        const idDoc = encabezado.IdDoc || {};
+        const emisor = encabezado.Emisor || {};
+        const totales = encabezado.Totales || {};
+        const detalle = encabezado.Detalle || {};
+
+        // Asegurarse de que `Item` sea siempre un array para un procesamiento uniforme
+        const items = detalle.Item ? (Array.isArray(detalle.Item) ? detalle.Item : [detalle.Item]) : [];
+
+        const detalle_items = items.map(item => ({
+          nro_linea:       item.NroLinDet ? Number(item.NroLinDet) : null,
+          nombre_item:     item.NomItem || null,
+          cantidad:        item.Cantidad ? Number(item.Cantidad) : null,
+          precio_unitario: item.PrecioUnitario ? Number(item.PrecioUnitario) : null,
+          monto_item:      item.MontoItem ? Number(item.MontoItem) : null,
+        }));
 
         return {
           id:                      uuidv4(),
           nombre_archivo_original: att.filename,
           fecha_procesamiento:     new Date().toISOString(),
           emisor_rut:              caratula.RUCEmisor || emisor.RUCEmisor || null,
-          emisor_nombre:           emisor.RznSoc || null,
+          emisor_nombre:           emisor.RznSoc || caratula.RznSoc || null,
           receptor_rut:            caratula.RutReceptor || null,
-          tipo_cfe:                idDoc.TipoCFE ? Number(idDoc.TipoCFE) : null,
+          tipo_cfe:                idDoc.TipoCFE  ? Number(idDoc.TipoCFE) : null,
           serie_cfe:               idDoc.Serie    || null,
           numero_cfe:              idDoc.Nro      ? Number(idDoc.Nro) : null,
           fecha_emision:           idDoc.FchEmis
@@ -111,6 +121,7 @@ try {
                                    : null,
           monto_total:             totales.MntTotal ? Number(totales.MntTotal) : (caratula.MntTotal ? Number(caratula.MntTotal) : null),
           moneda:                  totales.TpoMoneda || caratula.Moneda || null,
+          detalle:                 detalle_items,
           contenido_xml:           att.content
         };
       });
@@ -120,7 +131,7 @@ try {
         .table(TABLE_ID)
         .insert(rows, { ignoreUnknownValues: true, skipInvalidRows: true });
 
-      console.log(`✅ Procesadas ${rows.length} CFE(s). Insertando en BigQuery.`);
+      console.log(`✅ Insertadas ${rows.length} filas.`);
       return res.status(200).send(`Procesados ${rows.length} CFE(s).`);
     } catch (err) {
       console.error('❌ Error BigQuery insert:', err);
