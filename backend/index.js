@@ -414,79 +414,86 @@ app.post('/api/compras', async (req, res) => {
   try {
     // 1) Inserto la compra
     const compraId = uuidv4();
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    const montoTotal = detalles.reduce((sum, d) =>
-      sum + (d.cantidad * d.precio_neto_unitario), 0
-    );
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); // Formato para BigQuery DATETIME
+    
+    // --- MODIFICACIÓN: Cálculo de monto total más seguro ---
+    const montoTotal = detalles.reduce((sum, d) => {
+      const cantidad = parseFloat(d.cantidad) || 0;
+      const precio = parseFloat(d.precio_neto_unitario) || 0;
+      return sum + (cantidad * precio);
+    }, 0);
+
     const nuevaCompra = {
       id:                 compraId,
       proveedor_id:       proveedor_id,
       folio:              folio || null,
       fecha_emision:      fecha_emision ? new Date(fecha_emision).toISOString().slice(0, 19).replace('T', ' ') : now,
       centro_de_costos:   centro_de_costos || null,
-      created_at:         now,
+      created_at:         now, // Usamos el mismo timestamp para todo
       monto_total:        montoTotal,
       estado_ml:          'PENDIENTE'
     };
+
     await bigquery
       .dataset(DATASET_ID)
       .table('Compras')
       .insert([nuevaCompra]);
 
     // 2) Inserto los detalles
-    const detallesParaInsertar = detalles.map(d => ({
+    // --- MODIFICACIÓN: Sanitización de datos numéricos ---
+    const detallesParaInsertar = detalles.map(d => ({ 
       id:                   uuidv4(),
       compra_id:            compraId,
       producto_maestro_id:  d.producto_maestro_id || null,
-      cantidad:             parseFloat(d.cantidad),
-      precio_neto_unitario: parseFloat(d.precio_neto_unitario)
+      descripcion_original: d.descripcion_original,
+      cantidad:             parseFloat(d.cantidad) || 0,
+      precio_neto_unitario: parseFloat(d.precio_neto_unitario) || 0
     }));
+
     await bigquery
       .dataset(DATASET_ID)
       .table('Detalles_Compras')
       .insert(detallesParaInsertar);
 
-    // 3) Traigo el promedio 90 días desde la VIEW
-    const productoId = detallesParaInsertar[0].producto_maestro_id;
-    const precioNuevo = detallesParaInsertar[0].precio_neto_unitario;
-    const sqlView = `
-      SELECT precio_promedio
-      FROM \`celesta-poc.${DATASET_ID}.Precio_Promedio_90d\`
-      WHERE producto_maestro_id = @productoId
-      LIMIT 1
-    `;
-    const [viewRows] = await bigquery.query({
-      query: sqlView,
-      params: { productoId }
-    });
-    const precioPromedio = viewRows[0]?.precio_promedio || 0;
+    // --- MODIFICACIÓN: Lógica de alertas mejorada y más segura ---
+    // Itera sobre CADA detalle para verificar el precio
+    for (const detalle of detallesParaInsertar) {
+      // Solo procede si hay un producto maestro asignado
+      if (detalle.producto_maestro_id) {
+        try {
+          const sqlView = `
+            SELECT precio_promedio
+            FROM \`celesta-poc.${DATASET_ID}.Precio_Promedio_90d\`
+            WHERE producto_maestro_id = @productoId LIMIT 1`;
+          
+          const [viewRows] = await bigquery.query({
+            query: sqlView,
+            params: { productoId: detalle.producto_maestro_id }
+          });
+          const precioPromedio = viewRows[0]?.precio_promedio || 0;
 
-    // 4) Si el precio nuevo > promedio → inserto alerta en BigQuery
-    let alertaId = null;
-    if (precioNuevo > precioPromedio) {
-      alertaId = uuidv4();
-      await bigquery
-      .dataset(DATASET_ID)
-      .table('Alertas')
-      .insert([{
-        id:                  alertaId,
-        producto_maestro_id: productoId,
-        compra_id:           compraId,
-        precio_nuevo:        precioNuevo,
-        precio_promedio:     precioPromedio,
-        diferencia:          precioNuevo - precioPromedio,
-        created_at:          now,
-        leida:               false
-      }]);
+          if (detalle.precio_neto_unitario > precioPromedio) {
+            await bigquery.dataset(DATASET_ID).table('Alertas').insert([{
+              id: uuidv4(),
+              producto_maestro_id: detalle.producto_maestro_id,
+              compra_id: compraId,
+              precio_nuevo: detalle.precio_neto_unitario,
+              precio_promedio: precioPromedio,
+              diferencia: detalle.precio_neto_unitario - precioPromedio,
+              created_at: now,
+              leida: false
+            }]);
+          }
+        } catch (alertError) {
+          console.error(`Error generando alerta para producto ${detalle.producto_maestro_id}:`, alertError);
+        }
+      }
     }
 
-    // 5) Devuelvo la respuesta incluyendo info de alerta
+    // 5) Devuelvo la respuesta de la compra creada
     return sendSuccess(res, {
       ...nuevaCompra,
-      detalles:            detallesParaInsertar,
-      precio_promedio_90d: precioPromedio,
-      alerta_generada:     precioNuevo > precioPromedio,
-      alerta_id:           alertaId
+      detalles: detallesParaInsertar
     }, 201);
 
   } catch (e) {
