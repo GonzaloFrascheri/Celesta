@@ -83,47 +83,67 @@ try {
     try {
       const rows = attachments.map(att => {
         const doc = xmlParser.parse(att.content);
-
-        // Lógica de extracción más segura para manejar el anidamiento y la estructura
-        const envio = doc.EnvioCFE_entreEmpresas?.EnvioCFE_entreEmpresas || doc.EnvioCFE_entreEmpresas || {};
-        const caratula = envio.Caratula || {};
-        const cfe = envio.CFE_Adenda?.CFE || {};
-        const eFact = cfe.eFact || {};
-        const encabezado = eFact.Encabezado || {};
-        const idDoc = encabezado.IdDoc || {};
-        const emisor = encabezado.Emisor || {};
-        const totales = encabezado.Totales || {};
-        const detalle = encabezado.Detalle || {};
-
-        // Asegurarse de que `Item` sea siempre un array para un procesamiento uniforme
-        const items = detalle.Item ? (Array.isArray(detalle.Item) ? detalle.Item : [detalle.Item]) : [];
-
-        const detalle_items = items.map(item => ({
-          nro_linea:       item.NroLinDet ? Number(item.NroLinDet) : null,
-          nombre_item:     item.NomItem || null,
-          cantidad:        item.Cantidad ? Number(item.Cantidad) : null,
-          precio_unitario: item.PrecioUnitario ? Number(item.PrecioUnitario) : null,
-          monto_item:      item.MontoItem ? Number(item.MontoItem) : null,
-        }));
-
-        return {
-          id:                      uuidv4(),
+        const row = {
+          id: uuidv4(),
           nombre_archivo_original: att.filename,
-          fecha_procesamiento:     new Date().toISOString(),
-          emisor_rut:              caratula.RUCEmisor || emisor.RUCEmisor || null,
-          emisor_nombre:           emisor.RznSoc || caratula.RznSoc || null,
-          receptor_rut:            caratula.RutReceptor || null,
-          tipo_cfe:                idDoc.TipoCFE  ? Number(idDoc.TipoCFE) : null,
-          serie_cfe:               idDoc.Serie    || null,
-          numero_cfe:              idDoc.Nro      ? Number(idDoc.Nro) : null,
-          fecha_emision:           idDoc.FchEmis
-                                   ? new Date(idDoc.FchEmis).toISOString()
-                                   : null,
-          monto_total:             totales.MntTotal ? Number(totales.MntTotal) : (caratula.MntTotal ? Number(caratula.MntTotal) : null),
-          moneda:                  totales.TpoMoneda || caratula.Moneda || null,
-          detalle:                 detalle_items,
-          contenido_xml:           att.content
+          fecha_procesamiento: new Date().toISOString(),
+          contenido_xml: att.content,
+          emisor_rut: null,
+          emisor_nombre: null,
+          receptor_rut: null,
+          tipo_cfe: null,
+          serie_cfe: null,
+          numero_cfe: null,
+          fecha_emision: null,
+          monto_total: null,
+          moneda: null,
+          detalle: [],
         };
+
+        // --- Lógica para procesar FACTURAS (EnvioCFE_entreEmpresas) ---
+        if (doc.EnvioCFE_entreEmpresas) {
+          const envio = doc.EnvioCFE_entreEmpresas?.EnvioCFE_entreEmpresas || doc.EnvioCFE_entreEmpresas;
+          const caratula = envio.Caratula || {};
+          const cfe = envio.CFE_Adenda?.CFE || {};
+          const eFact = cfe.eFact || {};
+          const encabezado = eFact.Encabezado || {};
+          const idDoc = encabezado.IdDoc || {};
+          const emisor = encabezado.Emisor || {};
+          const totales = encabezado.Totales || {};
+          const detalle = encabezado.Detalle || {};
+          const items = detalle.Item ? (Array.isArray(detalle.Item) ? detalle.Item : [detalle.Item]) : [];
+
+          row.emisor_rut = caratula.RUCEmisor || emisor.RUCEmisor || null;
+          row.emisor_nombre = emisor.RznSoc || caratula.RznSoc || null;
+          row.receptor_rut = caratula.RutReceptor || null;
+          row.tipo_cfe = idDoc.TipoCFE ? Number(idDoc.TipoCFE) : null;
+          row.serie_cfe = idDoc.Serie || null;
+          row.numero_cfe = idDoc.Nro ? Number(idDoc.Nro) : null;
+          row.fecha_emision = idDoc.FchEmis ? new Date(idDoc.FchEmis).toISOString() : null;
+          row.monto_total = totales.MntTotal ? Number(totales.MntTotal) : null;
+          row.moneda = totales.TpoMoneda || null;
+          row.detalle = items.map(item => ({
+            nro_linea: item.NroLinDet ? Number(item.NroLinDet) : null,
+            nombre_item: item.NomItem || null,
+            cantidad: item.Cantidad ? Number(item.Cantidad) : null,
+            precio_unitario: item.PrecioUnitario ? Number(item.PrecioUnitario) : null,
+            monto_item: item.MontoItem ? Number(item.MontoItem) : null,
+          }));
+        } else if (doc.ACKCFE) { // --- Lógica para procesar ACUSES DE RECIBO (ACKCFE) ---
+          const ack = doc.ACKCFE;
+          const caratula = ack.Caratula || {};
+          const detalleAck = ack.ACKCFE_Det || {};
+
+          row.emisor_rut = caratula.RUCEmisor || null;
+          row.receptor_rut = caratula.RutReceptor || null;
+          row.tipo_cfe = detalleAck.TipoCFE ? Number(detalleAck.TipoCFE) : null;
+          row.serie_cfe = detalleAck.Serie || null;
+          row.numero_cfe = detalleAck.NroCFE ? Number(detalleAck.NroCFE) : null;
+          row.fecha_emision = detalleAck.FechaCFE ? new Date(detalleAck.FechaCFE).toISOString() : null;
+          // Los ACKs no tienen monto, nombre de emisor ni detalle. Se quedan en null/vacío.
+        }
+
+        return row;
       });
 
       await bigquery
