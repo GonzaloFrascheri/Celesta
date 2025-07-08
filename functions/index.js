@@ -24,10 +24,12 @@ try {
   }
 
   const bigquery = new BigQuery({ projectId: PROJECT_ID });
-  const xmlParser = new XMLParser({
+  const xmlParser = new XMLParser({ // Opciones de parser más robustas
     ignoreAttributes: false,
-    ignoreNameSpace: true, // Ignorar prefijos de namespace como 'ns0:'
-    parseTagValue: false,  // Dejar todos los valores como strings para un manejo manual
+    removeNSPrefix: true, // Elimina prefijos como 'ns0:' de las etiquetas
+    parseTagValue: false, // Mantiene todos los valores como strings
+    // Evita procesar las partes más grandes y complejas que no necesitamos
+    stopNodes: ["*.Signature", "*.X509Certificate"]
   });
 
   console.log('✅ Cliente de BigQuery y Parser XML inicializados.');
@@ -81,14 +83,15 @@ try {
     try {
       const rows = attachments.map(att => {
         const doc = xmlParser.parse(att.content);
+        
+        // Para depurar, puedes descomentar la siguiente línea y revisar los logs de Cloud Run
+        // console.log(JSON.stringify(doc, null, 2));
 
-        // El XML puede venir anidado, nos aseguramos de tomar el nodo correcto
-        const envio = doc.EnvioCFE_entreEmpresas?.EnvioCFE_entreEmpresas || doc.EnvioCFE_entreEmpresas;
-
-        // Hacemos la extracción de datos más robusta
-        const caratula = envio?.Caratula || {};
-        const cfe = envio?.CFE_Adenda?.CFE || {};
-        const encabezado = cfe?.eFact?.Encabezado || {};
+        // Lógica de extracción más segura para manejar el anidamiento y la estructura
+        const envio = doc.EnvioCFE_entreEmpresas?.EnvioCFE_entreEmpresas || doc.EnvioCFE_entreEmpresas || {};
+        const caratula = envio.Caratula || {};
+        const cfe = envio.CFE_Adenda?.CFE || {};
+        const encabezado = cfe.eFact?.Encabezado || {};
         const idDoc = encabezado?.IdDoc || {};
         const emisor = encabezado?.Emisor || {};
         const totales = encabezado?.Totales || {};
@@ -106,8 +109,8 @@ try {
           fecha_emision:           idDoc.FchEmis
                                    ? new Date(idDoc.FchEmis).toISOString()
                                    : null,
-          monto_total:             totales.MntTotal ? Number(totales.MntTotal) : null,
-          moneda:                  totales.TpoMoneda || null,
+          monto_total:             totales.MntTotal ? Number(totales.MntTotal) : (caratula.MntTotal ? Number(caratula.MntTotal) : null),
+          moneda:                  totales.TpoMoneda || caratula.Moneda || null,
           contenido_xml:           att.content
         };
       });
@@ -117,7 +120,7 @@ try {
         .table(TABLE_ID)
         .insert(rows, { ignoreUnknownValues: true, skipInvalidRows: true });
 
-      console.log(`✅ Insertadas ${rows.length} filas en BigQuery.`);
+      console.log(`✅ Procesadas ${rows.length} CFE(s). Insertando en BigQuery.`);
       return res.status(200).send(`Procesados ${rows.length} CFE(s).`);
     } catch (err) {
       console.error('❌ Error BigQuery insert:', err);
