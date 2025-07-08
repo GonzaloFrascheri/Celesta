@@ -84,10 +84,11 @@ try {
       const rows = attachments.map(att => {
         const doc = xmlParser.parse(att.content);
         const row = {
-          id: uuidv4(),
+          id:                      uuidv4(),
           nombre_archivo_original: att.filename,
-          fecha_procesamiento: new Date().toISOString(),
-          contenido_xml: att.content,
+          fecha_procesamiento:     new Date().toISOString(),
+          contenido_xml:           att.content,
+          tipo_documento: null,
           emisor_rut: null,
           emisor_nombre: null,
           receptor_rut: null,
@@ -102,6 +103,7 @@ try {
 
         // --- Lógica para procesar FACTURAS (EnvioCFE_entreEmpresas) ---
         if (doc.EnvioCFE_entreEmpresas) {
+          row.tipo_documento = 'CFE';
           const envio = doc.EnvioCFE_entreEmpresas?.EnvioCFE_entreEmpresas || doc.EnvioCFE_entreEmpresas;
           const caratula = envio.Caratula || {};
           const cfe = envio.CFE_Adenda?.CFE || {};
@@ -130,6 +132,7 @@ try {
             monto_item: item.MontoItem ? Number(item.MontoItem) : null,
           }));
         } else if (doc.ACKCFE) { // --- Lógica para procesar ACUSES DE RECIBO (ACKCFE) ---
+          row.tipo_documento = 'ACK';
           const ack = doc.ACKCFE;
           const caratula = ack.Caratula || {};
           const detalleAck = ack.ACKCFE_Det || {};
