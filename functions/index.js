@@ -11,7 +11,7 @@ try {
 
   const app = express();
 
-  const PROJECT_ID = process.env.GCP_PROJECT || 'celesta-poc';
+  const PROJECT_ID = process.env.GCLOUD_PROJECT_ID || 'celesta-poc';
   const DATASET_ID = process.env.BIGQUERY_DATASET_ID || 'celesta_data';
   const TABLE_ID   = process.env.BIGQUERY_TABLE_ID   || 'cfes';
 
@@ -20,11 +20,15 @@ try {
   console.log(`➡️  TABLE_ID: ${TABLE_ID}`);
 
   if (!PROJECT_ID) {
-    throw new Error('El PROJECT_ID no está definido. Asegúrate de que la variable de entorno GCP_PROJECT o GCLOUD_PROJECT esté disponible.');
+    throw new Error('El PROJECT_ID no está definido. Asegúrate de que la variable de entorno GCLOUD_PROJECT_ID, GCP_PROJECT o GCLOUD_PROJECT esté disponible.');
   }
 
-  const bigquery  = new BigQuery({ projectId: PROJECT_ID });
-  const xmlParser = new XMLParser({ ignoreAttributes:false, attributeNamePrefix: '' });
+  const bigquery = new BigQuery({ projectId: PROJECT_ID });
+  const xmlParser = new XMLParser({
+    ignoreAttributes: false,
+    ignoreNameSpace: true, // Ignorar prefijos de namespace como 'ns0:'
+    parseTagValue: false,  // Dejar todos los valores como strings para un manejo manual
+  });
 
   console.log('✅ Cliente de BigQuery y Parser XML inicializados.');
 
@@ -76,28 +80,34 @@ try {
 
     try {
       const rows = attachments.map(att => {
-        // parseamos el XML a objeto
         const doc = xmlParser.parse(att.content);
-        const eFact = doc?.EnvioCFE_entreEmpresas?.Caratula || doc?.CFE_Adenda?.['ns0:CFE']?.ns0?.eFact;
-        // aquí extraes tu Carátula o Encabezado según esquema
-        const car = doc?.EnvioCFE_entreEmpresas?.Caratula || {};
-        const idDoc = doc?.EnvioCFE_entreEmpresas?.CFE_Adenda?.['ns0:CFE']?.ns0?.eFact?.Encabezado?.IdDoc || {};
+
+        // El XML puede venir anidado, nos aseguramos de tomar el nodo correcto
+        const envio = doc.EnvioCFE_entreEmpresas?.EnvioCFE_entreEmpresas || doc.EnvioCFE_entreEmpresas;
+
+        // Hacemos la extracción de datos más robusta
+        const caratula = envio?.Caratula || {};
+        const cfe = envio?.CFE_Adenda?.CFE || {};
+        const encabezado = cfe?.eFact?.Encabezado || {};
+        const idDoc = encabezado?.IdDoc || {};
+        const emisor = encabezado?.Emisor || {};
+        const totales = encabezado?.Totales || {};
 
         return {
           id:                      uuidv4(),
           nombre_archivo_original: att.filename,
           fecha_procesamiento:     new Date().toISOString(),
-          emisor_rut:              car.RUCEmisor || null,
-          emisor_nombre:           car.RznSoc    || null,
-          receptor_rut:            car.RutReceptor || null,
+          emisor_rut:              caratula.RUCEmisor || emisor.RUCEmisor || null,
+          emisor_nombre:           emisor.RznSoc || null,
+          receptor_rut:            caratula.RutReceptor || null,
           tipo_cfe:                idDoc.TipoCFE ? Number(idDoc.TipoCFE) : null,
           serie_cfe:               idDoc.Serie    || null,
           numero_cfe:              idDoc.Nro      ? Number(idDoc.Nro) : null,
           fecha_emision:           idDoc.FchEmis
                                    ? new Date(idDoc.FchEmis).toISOString()
                                    : null,
-          monto_total:             car.CantCFE    || null,  // o Totales.MntTotal
-          moneda:                  car.Moneda     || null,
+          monto_total:             totales.MntTotal ? Number(totales.MntTotal) : null,
+          moneda:                  totales.TpoMoneda || null,
           contenido_xml:           att.content
         };
       });
@@ -107,7 +117,7 @@ try {
         .table(TABLE_ID)
         .insert(rows, { ignoreUnknownValues: true, skipInvalidRows: true });
 
-      console.log(`✅ Insertadas ${rows.length} filas`);
+      console.log(`✅ Insertadas ${rows.length} filas en BigQuery.`);
       return res.status(200).send(`Procesados ${rows.length} CFE(s).`);
     } catch (err) {
       console.error('❌ Error BigQuery insert:', err);
