@@ -406,7 +406,7 @@ app.get('/api/cfes/:id', async (req, res) => {
 /** COMPRAS */
 // CREATE
 app.post('/api/compras', async (req, res) => {
-  const { proveedor_id, folio, fecha_emision, centro_de_costos, detalles } = req.body;
+  const { proveedor_id, detalles } = req.body;
   if (!proveedor_id || !Array.isArray(detalles) || detalles.length === 0) {
     return sendError(res, 'Se requiere proveedor_id y detalles', 400);
   }
@@ -414,7 +414,7 @@ app.post('/api/compras', async (req, res) => {
   try {
     // 1) Inserto la compra
     const compraId = uuidv4();
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); // Formato para BigQuery DATETIME
+    const now = new Date().toISOString().slice(0,19).replace('T',' ');
     
     // --- MODIFICACIÓN: Cálculo de monto total más seguro ---
     const montoTotal = detalles.reduce((sum, d) => {
@@ -424,14 +424,14 @@ app.post('/api/compras', async (req, res) => {
     }, 0);
 
     const nuevaCompra = {
-      id:                 compraId,
-      proveedor_id:       proveedor_id,
-      folio:              folio || null,
-      fecha_emision:      fecha_emision ? new Date(fecha_emision).toISOString().slice(0, 19).replace('T', ' ') : now,
-      centro_de_costos:   centro_de_costos || null,
-      created_at:         now, // Usamos el mismo timestamp para todo
-      monto_total:        montoTotal,
-      estado_ml:          'PENDIENTE'
+      id:           compraId,
+      proveedor_id: proveedor_id,
+      created_at:   now,
+      folio:  folio || null,
+      centro_de_costo: centro_de_costo || null,
+      monto_total:  montoTotal,
+      created_at: now,
+      estado_ml:    'PENDIENTE'
     };
 
     await bigquery
