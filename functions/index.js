@@ -11,7 +11,7 @@ try {
 
   const app = express();
 
-  const PROJECT_ID = process.env.GCP_PROJECT || 'celesta-poc-8d755';
+  const PROJECT_ID = process.env.GCP_PROJECT || 'celesta-poc';
   const DATASET_ID = process.env.BIGQUERY_DATASET_ID || 'celesta_data';
   const TABLE_ID   = process.env.BIGQUERY_TABLE_ID   || 'cfes';
 
