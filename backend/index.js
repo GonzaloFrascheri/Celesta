@@ -489,19 +489,18 @@ app.post('/api/compras', async (req, res) => {
             : (parseFloat(precioPromedioRaw) || 0);
 
           if (detalle.precio_neto_unitario > precioPromedio) {
-            // FIX: Si las columnas en BigQuery son de tipo NUMERIC, debemos
-            // construir los valores usando BigQuery.numeric() para evitar
-            // errores de tipo de dato y pérdida de precisión.
             const precioNuevoNum = detalle.precio_neto_unitario;
             const diferenciaNum = precioNuevoNum - precioPromedio;
 
+            // FIX: Las columnas son FLOAT, por lo que pasamos números de JS directamente.
+            // No se debe usar BigQuery.numeric() si la columna no es de tipo NUMERIC.
             await bigquery.dataset(DATASET_ID).table('Alertas').insert([{
               id: uuidv4(),
               producto_maestro_id: detalle.producto_maestro_id,
               compra_id: compraId,
-              precio_nuevo: BigQuery.numeric(precioNuevoNum.toString()),
-              precio_promedio: BigQuery.numeric(precioPromedio.toString()),
-              diferencia: BigQuery.numeric(diferenciaNum.toString()),
+              precio_nuevo: precioNuevoNum,
+              precio_promedio: precioPromedio,
+              diferencia: diferenciaNum,
               created_at: now,
               leida: false
             }]);
