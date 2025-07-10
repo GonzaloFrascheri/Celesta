@@ -643,18 +643,22 @@ app.get('/api/compras', async (req, res) => {
   try {
     // MODIFICACIÓN: Usamos un JOIN para traer el nombre del proveedor
     const query = `
-      SELECT 
-        c.id, 
-        c.folio, 
-        c.monto_total, 
-        c.created_at, 
+      SELECT
+        c.id,
+        c.folio,
+        c.monto_total,
+        FORMAT_TIMESTAMP(
+         '%Y-%m-%d %H:%M:%S',
+         TIMESTAMP(c.created_at, 'UTC'),
+         'America/Montevideo'
+       ) AS created_at,
         c.estado_ml,
         p.razon_social AS proveedor_nombre -- Creamos un alias para el nombre del proveedor
-      FROM 
+      FROM
         \`${DATASET_ID}.Compras\` AS c
-      LEFT JOIN 
+      LEFT JOIN
         \`${DATASET_ID}.Proveedor\` AS p ON c.proveedor_id = p.id
-      ORDER BY 
+      ORDER BY
         c.created_at DESC
     `;
     const [rows] = await bigquery.query(query);
@@ -668,8 +672,23 @@ app.get('/api/compras', async (req, res) => {
 // READ ONE
 app.get('/api/compras/:id', async (req, res) => {
   try {
-    const query = `SELECT * FROM \`${DATASET_ID}.Compras\` WHERE id = @id`;
-    const [rows] = await bigquery.query({ query, params: { id: req.params.id } });
+    const query = `
+      SELECT
+        id,
+        proveedor_id,
+        folio,
+        fecha_emision,
+        centro_de_costos,
+        monto_total,
+        estado_ml,
+        FORMAT_TIMESTAMP(
+          '%Y-%m-%d %H:%M:%S',
+          TIMESTAMP(created_at, 'UTC'),
+          'America/Montevideo'
+        ) AS created_at
+      FROM \`${DATASET_ID}.Compras\`
+      WHERE id = @id`;
+    const [rows] = await bigquery.query({ query, params: { id: req.params.id }});
     if (rows.length === 0) return sendError(res, 'Compra no encontrada', 404);
     sendSuccess(res, rows[0]);
   } catch (error) {
