@@ -406,7 +406,7 @@ app.get('/api/cfes/:id', async (req, res) => {
 /** COMPRAS */
 // CREATE
 app.post('/api/compras', async (req, res) => {
-  const { proveedor_id, detalles } = req.body;
+  const { proveedor_id, detalles, folio, centro_de_costo } = req.body;
   if (!proveedor_id || !Array.isArray(detalles) || detalles.length === 0) {
     return sendError(res, 'Se requiere proveedor_id y detalles', 400);
   }
@@ -426,7 +426,6 @@ app.post('/api/compras', async (req, res) => {
     const nuevaCompra = {
       id:           compraId,
       proveedor_id: proveedor_id,
-      created_at:   now,
       folio:  folio || null,
       centro_de_costo: centro_de_costo || null,
       monto_total:  montoTotal,
