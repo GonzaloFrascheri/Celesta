@@ -16,10 +16,16 @@ export default function EditarCategoriaPage() {
 
   useEffect(() => {
     if (id) {
+      // DEBUG: Imprimimos el ID para asegurarnos de que llega correctamente.
+      console.log('🔵 DEBUG: ID de la categoría a editar:', id);
+
       const fetchCategoria = async () => {
+        const url = `/categoria/${id}`; // URL sin el /api duplicado
+        // DEBUG: Imprimimos la URL que se va a solicitar.
+        console.log('🔵 DEBUG: Solicitando URL (GET):', url);
         try {
           setLoading(true);
-          const response = await apiClient.get(`/api/categoria/${id}`);
+          const response = await apiClient.get(url);
           // FIX: La respuesta de la API está envuelta en un objeto "data".
           // Accedemos a response.data.data para obtener el objeto de la categoría.
           setNombre(response.data.data.nombre);
@@ -43,7 +49,11 @@ export default function EditarCategoriaPage() {
     setLoading(true);
     setError(null);
     try {
-      await apiClient.put(`/api/categoria/${id}`, { nombre });
+      const url = `/categoria/${id}`;
+      // DEBUG: Imprimimos la URL para la actualización.
+      console.log('🔵 DEBUG: Solicitando URL (PUT):', url);
+
+      await apiClient.put(url, { nombre });
       alert('Categoría actualizada con éxito');
       router.push('/home/categorias');
     } catch (err) {
