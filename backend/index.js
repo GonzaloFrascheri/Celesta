@@ -438,7 +438,6 @@ app.post('/api/compras', async (req, res) => {
       proveedor_id: proveedor_id,
       folio:        folio || null,
       fecha_emision: fechaEmisionFormateada, // Campo añadido
-      // FIX: Usamos el nombre de columna correcto ("centro_de_costos") y lo pasamos como string.
       centro_de_costos: centro_de_costos || null,
       monto_total:  montoTotal,
       created_at:   now, // Este es el timestamp de cuando se graba en el sistema
@@ -481,7 +480,13 @@ app.post('/api/compras', async (req, res) => {
             query: sqlView,
             params: { productoId: detalle.producto_maestro_id }
           });
-          const precioPromedio = viewRows[0]?.precio_promedio || 0;
+          // FIX: Manejar correctamente el tipo BigQuery.Numeric.
+          // El cliente de BQ devuelve los tipos NUMERIC/BIGNUMERIC como objetos.
+          // Debemos convertirlos a números primitivos para poder operar con ellos.
+          const precioPromedioRaw = viewRows[0]?.precio_promedio;
+          const precioPromedio = (precioPromedioRaw && typeof precioPromedioRaw === 'object' && precioPromedioRaw.value)
+            ? parseFloat(precioPromedioRaw.value)
+            : (parseFloat(precioPromedioRaw) || 0);
 
           if (detalle.precio_neto_unitario > precioPromedio) {
             await bigquery.dataset(DATASET_ID).table('Alertas').insert([{
