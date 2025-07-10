@@ -406,7 +406,13 @@ app.get('/api/cfes/:id', async (req, res) => {
 /** COMPRAS */
 // CREATE
 app.post('/api/compras', async (req, res) => {
-  const { proveedor_id, detalles, folio, centro_de_costo } = req.body;
+  const {
+    proveedor_id,
+    detalles,
+    folio,
+    fecha_emision,
+    centro_de_costos, // Recibimos "centro_de_costos" (plural) del payload
+  } = req.body;
   if (!proveedor_id || !Array.isArray(detalles) || detalles.length === 0) {
     return sendError(res, 'Se requiere proveedor_id y detalles', 400);
   }
@@ -414,6 +420,10 @@ app.post('/api/compras', async (req, res) => {
   try {
     // 1) Inserto la compra
     const compraId = uuidv4();
+    // Usamos la fecha de emisión del payload. El formato se ajusta para ser compatible con BigQuery (DATETIME).
+    const fechaEmisionFormateada = fecha_emision
+      ? new Date(fecha_emision).toISOString().slice(0, 19).replace('T', ' ')
+      : null;
     const now = new Date().toISOString().slice(0,19).replace('T',' ');
     
     // --- MODIFICACIÓN: Cálculo de monto total más seguro ---
@@ -426,10 +436,11 @@ app.post('/api/compras', async (req, res) => {
     const nuevaCompra = {
       id:           compraId,
       proveedor_id: proveedor_id,
-      folio:  folio || null,
-      centro_de_costo: centro_de_costo || null,
+      folio:        folio || null,
+      fecha_emision: fechaEmisionFormateada, // Campo añadido
+      centro_de_costo: centro_de_costos || null, // Usamos el valor del payload y lo asignamos a la columna correcta
       monto_total:  montoTotal,
-      created_at: now,
+      created_at:   now, // Este es el timestamp de cuando se graba en el sistema
       estado_ml:    'PENDIENTE'
     };
 
