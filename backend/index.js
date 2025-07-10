@@ -492,9 +492,7 @@ app.post('/api/compras', async (req, res) => {
             const precioNuevoNum = detalle.precio_neto_unitario;
             const diferenciaNum = precioNuevoNum - precioPromedio;
 
-            // FIX: Las columnas son FLOAT, por lo que pasamos números de JS directamente.
-            // No se debe usar BigQuery.numeric() si la columna no es de tipo NUMERIC.
-            await bigquery.dataset(DATASET_ID).table('Alertas').insert([{
+            const alertaParaInsertar = {
               id: uuidv4(),
               producto_maestro_id: detalle.producto_maestro_id,
               compra_id: compraId,
@@ -503,7 +501,14 @@ app.post('/api/compras', async (req, res) => {
               diferencia: diferenciaNum,
               created_at: now,
               leida: false
-            }]);
+            };
+
+            // DEBUG: Imprimimos el objeto que se va a insertar en Alertas.
+            console.log('🔵 DEBUG: Intentando insertar en Alertas:', JSON.stringify(alertaParaInsertar, null, 2));
+
+            // FIX: Las columnas son FLOAT, por lo que pasamos números de JS directamente.
+            // No se debe usar BigQuery.numeric() si la columna no es de tipo NUMERIC.
+            await bigquery.dataset(DATASET_ID).table('Alertas').insert([alertaParaInsertar]);
           }
         } catch (alertError) {
           console.error(`Error generando alerta para producto ${detalle.producto_maestro_id}:`, alertError);
@@ -518,7 +523,16 @@ app.post('/api/compras', async (req, res) => {
     }, 201);
 
   } catch (e) {
-    console.error('Error creando compra con alerta:', e);
+    console.error('Error creando compra con alerta:', e.message); // Mensaje principal
+
+    // DEBUG: Si el error es de BigQuery y tiene detalles, los imprimimos.
+    // Esto nos dirá EXACTAMENTE qué fila y qué columna fallaron.
+    if (e.name === 'PartialFailureError' && e.errors) {
+      console.error('🔴 DETALLES DEL ERROR DE BIGQUERY:', JSON.stringify(e.errors, null, 2));
+    } else {
+      // Si no es un error de BigQuery, imprimimos el stack completo
+      console.error(e);
+    }
     return sendError(res, 'Error interno creando compra');
   }
 });
