@@ -69,7 +69,11 @@ const bigquery = new BigQuery({
 
 const FULL_TABLE = `\`${PROJECT_ID}.${DATASET_ID}.${TABLE_ID}\``;
 
-const xmlParser = new XMLParser({ ignoreAttributes:false, attributeNamePrefix: '' });
+const xmlParser = new XMLParser({
+  ignoreAttributes:    false,
+  attributeNamePrefix: '',
+  ignoreNameSpace:     true,
+});
 
 console.log("--- [Punto 7] ✅ BigQuery inicializado con éxito ---");
 
@@ -329,29 +333,91 @@ app.post('/api/inbound', (req, res) => {
   });
 
   busboy.on('finish', async () => {
-    if (attachments.length === 0) {
-      console.warn('⚠️ Sin adjuntos XML.');
-      return sendError(res, 'Sin adjuntos XML', 400);
-    }
+  if (attachments.length === 0) {
+    console.warn('⚠️ Sin adjuntos XML.');
+    return sendError(res, 'Sin adjuntos XML', 400);
+  }
 
-    try {
-      const rows = attachments.map(att => {
-        const doc = xmlParser.parse(att.content);
-        const car = doc?.EnvioCFE_entreEmpresas?.Caratula || {};
-        const idDoc = doc?.EnvioCFE_entreEmpresas?.CFE_Adenda?.['ns0:CFE']?.ns0?.eFact?.Encabezado?.IdDoc || {};
+  try {
+    const rows = attachments.map(att => {
+      const doc = xmlParser.parse(att.content);
+      // detectamos el nodo raíz:
+      const root = Object.keys(doc)[0];
+      const body = doc[root] || {};
 
-        return { id: uuidv4(), nombre_archivo_original: att.filename, fecha_procesamiento: new Date().toISOString(), emisor_rut: car.RUCEmisor || null, emisor_nombre: car.RznSoc || null, receptor_rut: car.RutReceptor || null, tipo_cfe: idDoc.TipoCFE ? Number(idDoc.TipoCFE) : null, serie_cfe: idDoc.Serie || null, numero_cfe: idDoc.Nro ? Number(idDoc.Nro) : null, fecha_emision: idDoc.FchEmis ? new Date(idDoc.FchEmis).toISOString() : null, monto_total: car.CantCFE || null, moneda: car.Moneda || null, contenido_xml: att.content };
-      });
+      // Carátula común a todos:
+      const car = body.Caratula || {};
 
-      await bigquery.dataset(DATASET_ID).table(TABLE_ID).insert(rows, { ignoreUnknownValues: true, skipInvalidRows: true });
+      // Totales (solo válido en el envío normal)
+      const tot = body.Totales || {};
 
-      console.log(`✅ Insertadas ${rows.length} filas de CFE.`);
-      sendSuccess(res, { message: `Procesados ${rows.length} CFE(s).` });
-    } catch (err) {
-      console.error('❌ Error en inserción de BigQuery para CFE:', err);
-      sendError(res, 'Error interno insertando CFE en BigQuery.');
-    }
-  });
+      // IdDoc en eFact o ACKCFE_Det
+      let idoc = {};
+      if (body.CFE_Adenda) {
+        idoc = body.CFE_Adenda.CFE.eFact.Encabezado.IdDoc || {};
+      } else if (body.ACKCFE_Det) {
+        idoc = body.ACKCFE_Det;
+      } else if (body.Detalle) {
+        // ACKSobre no trae id, dejamos vacío
+        idoc = {};
+      }
+
+      return {
+        id:                      uuidv4(),
+        nombre_archivo_original: att.filename,
+        fecha_procesamiento:     new Date().toISOString(),
+
+        // — Campos básicos —
+        emisor_rut:    car.RUCEmisor    || null,
+        emisor_nombre: car.RznSoc       || null,
+        receptor_rut:  car.RutReceptor   || null,
+
+        // — NUEVOS campos de Carátula —
+        rut_receptor_caratula: car.RutReceptor          || null,
+        ruc_emisor_caratula:   car.RUCEmisor            || null,
+        cantidad_cfe:
+          car.CantCFE      // envío normal
+          || car.CantenSobre  // ACKCFE
+          || car.CantidadCFE  // ACKSobre
+          || null,
+        fecha_caratula:
+          car.Fecha   // envío normal
+          || car.Tmst // ACKCFE / ACKSobre
+          || null,
+
+        // — Totales / IdDoc —
+        tipo_cfe:      idoc.TipoCFE   ? Number(idoc.TipoCFE)   : null,
+        serie_cfe:     idoc.Serie     || null,
+        numero_cfe:    idoc.Nro       ? Number(idoc.Nro)
+                      : idoc.NroCFE    ? Number(idoc.NroCFE)
+                      : null,
+        fecha_emision: idoc.FchEmis             // Envío normal
+                      || idoc.FechaCFE           // ACKCFE
+                      || null,
+
+        monto_total: tot.MntTotal    // Envío normal
+                   || car.CantCFE     // A falta de Totales
+                   || null,
+        moneda:      tot.TpoMoneda   // Envío normal
+                   || car.TpoMoneda   // por si acaso
+                   || null,
+
+        contenido_xml: att.content
+      };
+    });
+
+    await bigquery
+      .dataset(DATASET_ID)
+      .table(TABLE_ID)
+      .insert(rows, { ignoreUnknownValues: true, skipInvalidRows: true });
+
+    console.log(`✅ Insertadas ${rows.length} filas de CFE.`);
+    sendSuccess(res, { message: `Procesados ${rows.length} CFE(s).` });
+  } catch (err) {
+    console.error('❌ Error en inserción de BigQuery para CFE:', err);
+    sendError(res, 'Error interno insertando CFE en BigQuery.');
+  }
+});
 
   req.pipe(busboy);
 });

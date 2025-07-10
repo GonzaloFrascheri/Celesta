@@ -21,11 +21,12 @@ interface CFE {
   monto_total: number | null;
   moneda: string | null;
   rut_receptor_caratula: string | null;
-  ruc_emisor_caratula: string | null;
-  cantidad_cfe: number | null;
-  fecha_caratula: string | null;
+  ruc_emisor_caratula:   string | null;
+  cantidad_cfe:          number | null;
+  fecha_caratula:        string | null;
   contenido_xml: string;
 }
+
 
 export default function CFEPage() {
   const { id } = useParams();
