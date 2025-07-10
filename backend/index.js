@@ -438,7 +438,8 @@ app.post('/api/compras', async (req, res) => {
       proveedor_id: proveedor_id,
       folio:        folio || null,
       fecha_emision: fechaEmisionFormateada, // Campo añadido
-      centro_de_costo: centro_de_costos || null, // Usamos el valor del payload y lo asignamos a la columna correcta
+      // FIX: Usamos el nombre de columna correcto ("centro_de_costos") y lo pasamos como string.
+      centro_de_costos: centro_de_costos || null,
       monto_total:  montoTotal,
       created_at:   now, // Este es el timestamp de cuando se graba en el sistema
       estado_ml:    'PENDIENTE'
