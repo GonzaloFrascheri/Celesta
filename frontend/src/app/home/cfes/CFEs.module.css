@@ -1,0 +1,70 @@
+.container {
+  padding: 1rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.title {
+  margin-bottom: 1rem;
+  font-size: 1.8rem;
+  text-align: center;
+}
+.search {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.card {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.cardTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  color: #333;
+}
+.separator {
+  color: #777;
+}
+.cardText {
+  margin: 0.3rem 0 0.8rem;
+  color: #555;
+}
+.button {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: #0070f3;
+  color: #fff;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.pagination button {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #0070f3;
+  background: white;
+  color: #0070f3;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

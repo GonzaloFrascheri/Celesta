@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent  } from 'react';
 import Link from 'next/link';
+import styles from './CFEs.module.css';
 
 interface CFE {
   id: string;
@@ -25,114 +26,90 @@ interface CFE {
 
 export default function CFEsPage() {
   const [cfes, setCfes]         = useState<CFE[]>([]);
-  const [filtered, setFiltered] = useState<CFE[]>([]);
-  const [search, setSearch]     = useState('');
   const [loading, setLoading]   = useState(true);
+  const [search, setSearch]     = useState('');
+  const [page,   setPage]       = useState(1);
+  const perPage = 5;
 
-  // Carga inicial
   useEffect(() => {
-    setLoading(true);
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/cfes?limit=100`)
-      .then(res => res.json())
+      .then(r => r.json())
       .then(json => {
-        if (json.success) {
-          setCfes(json.data.items);
-          setFiltered(json.data.items);
-        } else {
-          console.error('Error al cargar CFEs:', json.error);
-        }
+        if (json.success) setCfes(json.data.items);
       })
-      .catch(err => console.error('Fetch CFEs error:', err))
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  // Filtrado por búsqueda (emisor_nombre o receptor_rut)
-  useEffect(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) {
-      setFiltered(cfes);
-    } else {
-      setFiltered(
-        cfes.filter(c =>
-          (c.emisor_nombre || '').toLowerCase().includes(term) ||
-          (c.receptor_rut  || '').toLowerCase().includes(term)
-        )
-      );
-    }
-  }, [search, cfes]);
+  // filtro por emisor o receptor
+  const term = search.trim().toLowerCase();
+  const filtered = cfes.filter(c =>
+    (c.emisor_rut    || '').toLowerCase().includes(term) ||
+    (c.receptor_rut  || '').toLowerCase().includes(term)
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const paginated  = filtered.slice((page-1)*perPage, page*perPage);
+
+  if (loading) return <p>Cargando CFEs…</p>;
 
   return (
-    <div style={{ padding: 20 }}>
-      {/* Título */}
-      <h1>Listado de CFEs</h1>
+    <div className={styles.container}>
+      <h1 className={styles.title}>Listado de CFEs</h1>
 
-      {/* Buscador */}
-      <div style={{ margin: '1rem 0', maxWidth: 320 }}>
-        <input
-          type="text"
-          placeholder="Buscar por emisor o receptor…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px',
-            borderRadius: 4,
-            border: '1px solid #ccc',
-            fontSize: '1rem'
-          }}
-        />
-      </div>
+      <input
+        type="text"
+        placeholder="🔍 Buscar por RUT emisor o receptor…"
+        value={search}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+          setSearch(e.target.value);
+          setPage(1);
+        }}
+        className={styles.search}
+      />
 
-      {/* Estado de carga */}
-      {loading && <p>Cargando CFEs…</p>}
+      {filtered.length === 0 && <p>No se encontraron CFEs.</p>}
 
-      {/* No hay resultados */}
-      {!loading && filtered.length === 0 && (
-        <p>No se encontraron CFEs.</p>
-      )}
+      <ul className={styles.list}>
+        {paginated.map(cfe => (
+          <li key={cfe.id} className={styles.card}>
+            {/* Título con RUT emisor y fecha/hora */}
+            <h3 className={styles.cardTitle}>
+              {cfe.emisor_rut || '—'}{' '}
+              <span className={styles.separator}>·</span>{' '}
+              {new Date(cfe.fecha_procesamiento.value).toLocaleString()}
+            </h3>
+            <p className={styles.cardText}>
+              Total:{' '}
+              <strong>
+                {cfe.monto_total != null
+                  ? `${cfe.monto_total} ${cfe.moneda}`
+                  : '—'}
+              </strong>
+            </p>
+            <Link href={`/home/cfes/${cfe.id}`} className={styles.button}>
+              Ver detalle
+            </Link>
+          </li>
+        ))}
+      </ul>
 
-      {/* Lista de resultados */}
-      {!loading && filtered.map(cfe => (
-        <div
-          key={cfe.id}
-          style={{
-            border: '1px solid #ddd',
-            borderRadius: 4,
-            padding: 12,
-            marginBottom: 12,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}
+      {/* Paginación */}
+      <div className={styles.pagination}>
+        <button
+          onClick={() => setPage(p => Math.max(p-1, 1))}
+          disabled={page === 1}
         >
-          <p style={{ margin: 0, fontSize: '1.1rem' }}>
-            <strong>{cfe.emisor_nombre || '—'}</strong>{' '}
-            <span style={{ color: '#555' }}>→</span>{' '}
-            <em>{cfe.receptor_rut || '—'}</em>
-          </p>
-          <p style={{ margin: '4px 0' }}>
-            Total:{' '}
-            <strong>
-              {cfe.monto_total != null
-                ? `${cfe.monto_total} ${cfe.moneda}`
-                : '—'}
-            </strong>
-          </p>
-          <Link
-            href={`/home/cfes/${cfe.id}`}
-            style={{
-              display: 'inline-block',
-              marginTop: 8,
-              padding: '6px 12px',
-              backgroundColor: '#0070f3',
-              color: '#fff',
-              borderRadius: 4,
-              textDecoration: 'none',
-              fontSize: '0.9rem'
-            }}
-          >
-            Ver detalle
-          </Link>
-        </div>
-      ))}
+          ← Anterior
+        </button>
+        <span>Página {page} de {totalPages}</span>
+        <button
+          onClick={() => setPage(p => Math.min(p+1, totalPages))}
+          disabled={page === totalPages}
+        >
+          Siguiente →
+        </button>
+      </div>
     </div>
   );
 }
