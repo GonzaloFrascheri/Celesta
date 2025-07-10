@@ -420,10 +420,9 @@ app.post('/api/compras', async (req, res) => {
   try {
     // 1) Inserto la compra
     const compraId = uuidv4();
-    // Usamos la fecha de emisión del payload. El formato se ajusta para ser compatible con BigQuery (DATETIME).
-    const fechaEmisionFormateada = fecha_emision
-      ? new Date(fecha_emision).toISOString().slice(0, 19).replace('T', ' ')
-      : null;
+    // FIX: La columna 'fecha_emision' en BigQuery es de tipo DATE.
+    // No debemos transformar el string, sino pasarlo directamente.
+    const fechaEmisionFormateada = fecha_emision || null;
     const now = new Date().toISOString().slice(0,19).replace('T',' ');
     
     // --- MODIFICACIÓN: Cálculo de monto total más seguro ---
