@@ -6,6 +6,7 @@ const Busboy = require('busboy');
 const { XMLParser } = require('fast-xml-parser');
 const { BigQuery } = require('@google-cloud/bigquery');
 const { v4: uuidv4 } = require('uuid');
+const { setIntervalAsync, clearIntervalAsync } = require('set-interval-async/fixed');
 
 const app = express();
 
@@ -91,6 +92,61 @@ app.get('/', (req, res) => {
     status: 'ok',
     message: 'La API de Celesta está en línea y funcionando.',
     timestamp: new Date().toISOString()
+  });
+});
+
+
+// SSE: canal de notificaciones
+app.get('/api/notifications/stream', async (req, res) => {
+  // Cabeceras necesarias para SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders();
+
+  let lastAlertCount = 0;
+  let lastCfeCount   = 0;
+
+  // Función que comprueba nuevos conteos y envía evento si hay cambios
+  const checkAndNotify = async () => {
+    try {
+      // 1) Alertas
+      const [alertRows] = await bigquery.query({
+        query: `SELECT COUNT(*) as cnt FROM \`${DATASET_ID}.Alertas\` WHERE leida = FALSE`
+      });
+      const newAlertCount = Number(alertRows[0].cnt);
+      if (newAlertCount > lastAlertCount) {
+        // enviamos un SSE de alerta
+        res.write(`event: newAlert\n`);
+        res.write(`data: ${newAlertCount - lastAlertCount}\n\n`);
+        lastAlertCount = newAlertCount;
+      }
+
+      // 2) CFEs (solo contamos totales o los no vistos)
+      const [cfeRows] = await bigquery.query({
+        query: `SELECT COUNT(*) as cnt FROM ${FULL_TABLE}`
+      });
+      const newCfeCount = Number(cfeRows[0].cnt);
+      if (newCfeCount > lastCfeCount) {
+        res.write(`event: newCfe\n`);
+        res.write(`data: ${newCfeCount - lastCfeCount}\n\n`);
+        lastCfeCount = newCfeCount;
+      }
+    } catch (err) {
+      console.error('SSE poll error:', err);
+      // opcional: podrías enviar un event:error
+    }
+  };
+
+  // chequeo inmediato para inicializar last*
+  await checkAndNotify();
+
+  // chequeo cada 15s
+  const handle = setIntervalAsync(checkAndNotify, 15_000);
+
+  // cuando el cliente cierra la conexión
+  req.on('close', async () => {
+    await clearIntervalAsync(handle);
+    res.end();
   });
 });
 
