@@ -12,7 +12,6 @@ export default function Sidebar({ onLinkClick }) {
 
   const [alertCount, setAlertCount] = useState(0);
   const [cfeCount, setCfeCount]     = useState(0);
-  const esRef = useRef(null);
 
   // 1️⃣ Carga inicial de alertas
   useEffect(() => {
@@ -40,49 +39,6 @@ export default function Sidebar({ onLinkClick }) {
       .catch(err => console.error('Error al leer CFEs:', err));
   }, [API]);
 
-  // 3️⃣ SSE para notificaciones push de nuevas alertas / CFEs
-  useEffect(() => {
-    if (!API || typeof window === 'undefined') return;
-
-    // Pedimos permiso de notificaciones si hace falta
-    if (Notification.permission === 'default') {
-      Notification.requestPermission().catch(console.error);
-    }
-
-    const es = new EventSource(`${API}/notifications/stream`);
-    esRef.current = es;
-
-    // Cuando llegue evento de nuevas alertas
-    es.addEventListener('newAlert', e => {
-      const delta = Number(e.data) || 0;
-      setAlertCount(prev => prev + delta);
-      if (Notification.permission === 'granted' && delta > 0) {
-        new Notification('¡Tienes nuevas alertas!', {
-          body: `Han llegado ${delta} alerta(s).`
-        });
-      }
-    });
-
-    // Cuando llegue evento de nuevos CFEs
-    es.addEventListener('newCfe', e => {
-      const delta = Number(e.data) || 0;
-      setCfeCount(prev => prev + delta);
-      if (Notification.permission === 'granted' && delta > 0) {
-        new Notification('¡Nuevo(s) CFE(s)!', {
-          body: `Se han recibido ${delta} CFE(s).`
-        });
-      }
-    });
-
-    es.onerror = err => {
-      console.error('SSE error:', err);
-      // El navegador intenta reconectar automáticamente
-    };
-
-    return () => {
-      es.close();
-    };
-  }, [API]);
 
   return (
     <aside className={styles.sidebar}>

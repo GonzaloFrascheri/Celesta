@@ -5,13 +5,8 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
 import styles from "./Topbar.module.css";
-import {
-  FaBell,
-  FaSignOutAlt,
-  FaUserCircle,
-  FaCog,
-  FaBars,
-} from "react-icons/fa";
+import { FaSignOutAlt, FaUserCircle, FaCog, FaBars } from "react-icons/fa";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function Topbar({ onMenuButtonClick }) {
   const { user, logout } = useAuth();
@@ -75,10 +70,7 @@ export default function Topbar({ onMenuButtonClick }) {
       </div>
 
       <div className={styles.rightActions}>
-        <button className={styles.iconButton} title="Notificaciones">
-          <FaBell />
-          <span className={styles.notificationBadge}></span>
-        </button>
+        <NotificationBell />
         <div className={styles.separator}></div>
 
         <div className={styles.userMenu} ref={dropdownRef}>
