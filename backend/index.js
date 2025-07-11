@@ -351,6 +351,11 @@ app.post('/api/inbound', (req, res) => {
       // Totales (solo válido en el envío normal)
       const tot = body.Totales || {};
 
+       // 1) Rut / RUC emisor y receptor
+      const emisorRut    = car.RUTEmisor    ?? car.RUCEmisor    ?? null;
+      const receptorRut  = car.RUTReceptor   ?? car.RUCReceptor  ?? null;
+      const emisorNombre = car.RznSoc       ?? car.RazonSocial ?? null;
+
       const cantidadRaw =
         car.CantenSobre         // Envío normal: <CantenSobre>
         ?? car.CantidadCFE      // ACKSobre: <CantidadCFE>
@@ -381,16 +386,14 @@ app.post('/api/inbound', (req, res) => {
         nombre_archivo_original: att.filename,
         fecha_procesamiento:     new Date().toISOString(),
 
-        // — Campos básicos —
-        emisor_rut:    car.RUTEmisor    || null,
-        emisor_nombre: car.RznSoc       || null,
-        receptor_rut:  car.RutReceptor   || null,
-
-        // — Campos de Carátula normalizados —
-        rut_receptor_caratula: car.RutReceptor || null,
-        ruc_emisor_caratula:   car.RUCEmisor   || null,
-        cantidad_cfe:          cantidadRaw != null ? Number(cantidadRaw) : null,
-        fecha_caratula:        fechaRaw   ? new Date(fechaRaw).toISOString() : null,
+        // — Carátula —
+        emisor_rut:               emisorRut,
+        emisor_nombre:            emisorNombre,
+        receptor_rut:             receptorRut,
+        rut_receptor_caratula:    receptorRut,
+        ruc_emisor_caratula:      emisorRut,
+        cantidad_cfe:             cantidadRaw != null ? Number(cantidadRaw) : null,
+        fecha_caratula:           fechaRaw   ? new Date(fechaRaw).toISOString() : null,
 
         // — Totales / IdDoc —
         tipo_cfe:      idoc.TipoCFE   ? Number(idoc.TipoCFE)   : null,
@@ -398,16 +401,14 @@ app.post('/api/inbound', (req, res) => {
         numero_cfe:    idoc.Nro       ? Number(idoc.Nro)
                       : idoc.NroCFE    ? Number(idoc.NroCFE)
                       : null,
-        fecha_emision: idoc.FchEmis             // Envío normal
+        fecha_emision: idoc.FchEmis             // e-Fact normal
                       || idoc.FechaCFE           // ACKCFE
                       || null,
 
-        monto_total:   tot.MntTotal    // Envío normal
-                      || Number(cantidadRaw) * Number(idoc.PrecioUnitario || 1) // fallback muy básico
-                      || null,
-        moneda:        tot.TpoMoneda   // Envío normal
-                      || car.TpoMoneda   // fallback
-                      || null,
+        monto_total:   tot.MntTotal    // e-Fact normal
+                      ?? null,
+        moneda:        tot.TpoMoneda   // e-Fact normal
+                      ?? null,
 
         contenido_xml: att.content
       };

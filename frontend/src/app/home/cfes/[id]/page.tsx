@@ -135,22 +135,24 @@ export default function CFEPage() {
       <section className={styles.section}>
         <h2>Carátula</h2>
         <div className={styles.tableResponsive}>
-          <table role="table" aria-label="Carátula del CFE">
+          <table>
             <tbody>
               {[
-                ['RUT Emisor', cfe.emisor_rut],
-                ['Nombre Emisor', cfe.emisor_nombre],
-                ['RUT Receptor', cfe.receptor_rut],
-                ['RUT Receptor (carátula)', cfe.rut_receptor_caratula || '—'],
-                ['RUC Emisor (carátula)', cfe.ruc_emisor_caratula   || '—'],
-                ['Cantidad CFE',            cfe.cantidad_cfe != null ? cfe.cantidad_cfe : '—'],
-                ['Fecha Carátula',          cfe.fecha_caratula
-                  ? new Date(cfe.fecha_caratula).toLocaleString()
-                  : '—'],
-              ].map(([k, v]) => (
-                <tr key={k}>
-                  <th>{k}</th>
-                  <td>{v}</td>
+                ['RUT Emisor',           cfe.emisor_rut],
+                ['Nombre Emisor',        cfe.emisor_nombre],
+                ['RUT Receptor',         cfe.receptor_rut],
+                ['RUT Receptor (carátula)', cfe.rut_receptor_caratula],
+                ['RUC Emisor (carátula)',   cfe.ruc_emisor_caratula],
+                ['Cantidad CFE',         cfe.cantidad_cfe != null
+                                            ? cfe.cantidad_cfe 
+                                            : '—'],
+                ['Fecha Carátula',       cfe.fecha_caratula
+                                            ? new Date(cfe.fecha_caratula).toLocaleString()
+                                            : '—'],
+              ].map(([label, val]) => (
+                <tr key={label}>
+                  <th>{label}</th>
+                  <td>{val ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
