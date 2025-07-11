@@ -351,6 +351,20 @@ app.post('/api/inbound', (req, res) => {
       // Totales (solo válido en el envío normal)
       const tot = body.Totales || {};
 
+      const cantidadRaw =
+        car.CantenSobre         // Envío normal: <CantenSobre>
+        ?? car.CantidadCFE      // ACKSobre: <CantidadCFE>
+        ?? car.CantCFEAceptados // ACKCFE: <CantCFEAceptados>
+        ?? car.CantCFCAceptados // posible variante
+        ?? null;
+
+      // Buscamos todos los posibles tags de fecha de carátula/timbre:
+      const fechaRaw =
+        car.FchEmis        // Envío normal: <FchEmis>
+        ?? car.FecHRecibido// ACKCFE: <FecHRecibido>
+        ?? car.Tmst        // ACKCFE/ACKSobre: <Tmst>
+        ?? null;
+        
       // IdDoc en eFact o ACKCFE_Det
       let idoc = {};
       if (body.CFE_Adenda) {
@@ -368,22 +382,15 @@ app.post('/api/inbound', (req, res) => {
         fecha_procesamiento:     new Date().toISOString(),
 
         // — Campos básicos —
-        emisor_rut:    car.RUCEmisor    || null,
+        emisor_rut:    car.RUTEmisor    || null,
         emisor_nombre: car.RznSoc       || null,
         receptor_rut:  car.RutReceptor   || null,
 
-        // — NUEVOS campos de Carátula —
-        rut_receptor_caratula: car.RutReceptor          || null,
-        ruc_emisor_caratula:   car.RUCEmisor            || null,
-        cantidad_cfe:
-          car.CantCFE      // envío normal
-          || car.CantenSobre  // ACKCFE
-          || car.CantidadCFE  // ACKSobre
-          || null,
-        fecha_caratula:
-          car.Fecha   // envío normal
-          || car.Tmst // ACKCFE / ACKSobre
-          || null,
+        // — Campos de Carátula normalizados —
+        rut_receptor_caratula: car.RutReceptor || null,
+        ruc_emisor_caratula:   car.RUCEmisor   || null,
+        cantidad_cfe:          cantidadRaw != null ? Number(cantidadRaw) : null,
+        fecha_caratula:        fechaRaw   ? new Date(fechaRaw).toISOString() : null,
 
         // — Totales / IdDoc —
         tipo_cfe:      idoc.TipoCFE   ? Number(idoc.TipoCFE)   : null,
@@ -395,12 +402,12 @@ app.post('/api/inbound', (req, res) => {
                       || idoc.FechaCFE           // ACKCFE
                       || null,
 
-        monto_total: tot.MntTotal    // Envío normal
-                   || car.CantCFE     // A falta de Totales
-                   || null,
-        moneda:      tot.TpoMoneda   // Envío normal
-                   || car.TpoMoneda   // por si acaso
-                   || null,
+        monto_total:   tot.MntTotal    // Envío normal
+                      || Number(cantidadRaw) * Number(idoc.PrecioUnitario || 1) // fallback muy básico
+                      || null,
+        moneda:        tot.TpoMoneda   // Envío normal
+                      || car.TpoMoneda   // fallback
+                      || null,
 
         contenido_xml: att.content
       };

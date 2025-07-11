@@ -143,8 +143,10 @@ export default function CFEPage() {
                 ['RUT Receptor', cfe.receptor_rut],
                 ['RUT Receptor (carátula)', cfe.rut_receptor_caratula || '—'],
                 ['RUC Emisor (carátula)', cfe.ruc_emisor_caratula   || '—'],
-                ['Cantidad CFE',            cfe.cantidad_cfe          ?? '—'],
-                ['Fecha Carátula',          cfe.fecha_caratula        ?? '—'],
+                ['Cantidad CFE',            cfe.cantidad_cfe != null ? cfe.cantidad_cfe : '—'],
+                ['Fecha Carátula',          cfe.fecha_caratula
+                  ? new Date(cfe.fecha_caratula).toLocaleString()
+                  : '—'],
               ].map(([k, v]) => (
                 <tr key={k}>
                   <th>{k}</th>
