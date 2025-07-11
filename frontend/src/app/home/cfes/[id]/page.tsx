@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { coy as syntaxStyle } from 'react-syntax-highlighter/dist/esm/styles/prism';
+// @ts-ignore
+const syntaxStyle = require('react-syntax-highlighter/dist/esm/styles/prism/coy').default;
 import styles from './page.module.css';
 
 interface CFE {

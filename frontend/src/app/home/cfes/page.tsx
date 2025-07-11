@@ -79,14 +79,6 @@ export default function CFEsPage() {
               <span className={styles.separator}>·</span>{' '}
               {new Date(cfe.fecha_procesamiento.value).toLocaleString()}
             </h3>
-            <p className={styles.cardText}>
-              Total:{' '}
-              <strong>
-                {cfe.monto_total != null
-                  ? `${cfe.monto_total} ${cfe.moneda}`
-                  : '—'}
-              </strong>
-            </p>
             <Link href={`/home/cfes/${cfe.id}`} className={styles.button}>
               Ver detalle
             </Link>

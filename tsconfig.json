@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom","dom.iterable","esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+
+    // sólo un typeRoot: node_modules/@types
+    // (quita el "./" para que no incluya toda la raíz)
+    "typeRoots": ["node_modules/@types"],
+
+    // si usas import “@/...” apúntalo a tu carpeta de src/frontend
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["frontend/src/*"]
+    }
+  },
+
+  // Sólo incluye el código TS/TSX de tu frontend + el shim de globales
+  "include": [
+    "next-env.d.ts",
+    "global.d.ts",
+    "frontend/**/*.ts",
+    "frontend/**/*.tsx"
+  ],
+
+  // Excluye todo lo demás
+  "exclude": [
+    "node_modules",
+    "backend",
+    "functions"
+  ]
+}
