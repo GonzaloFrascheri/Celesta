@@ -226,3 +226,69 @@
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
 }
+
+/* — contenedor general del dashboard — */
+.dashboardContainer {
+  padding: 1rem;
+}
+
+/* — TOP 3 — */
+.top3Section {
+  margin: 2rem 0 1.5rem;
+}
+.top3Section h2 {
+  color: var(--primary-color);
+  margin-bottom: 0.8rem;
+}
+.top3Container {
+  display: flex;
+  gap: 1rem;
+}
+.top3Card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  transition: transform .2s, box-shadow .2s;
+}
+.top3Card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.top3Title {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 0.4rem;
+}
+
+/* — WRAPPER de las gráficas — */
+.chartCard {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+.chartCard h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+}
+.dashboardCharts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.chartContainer {
+  background: #fff;
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  height: 300px;
+}
