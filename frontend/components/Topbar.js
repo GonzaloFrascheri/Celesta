@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
 import styles from "./Topbar.module.css";
 import { FaSignOutAlt, FaUserCircle, FaCog, FaBars } from "react-icons/fa";
-import NotificationBell from "@/components/NotificationBell";
+import NotificationBell from "../components/NotificationBell";
 
 export default function Topbar({ onMenuButtonClick }) {
   const { user, logout } = useAuth();
