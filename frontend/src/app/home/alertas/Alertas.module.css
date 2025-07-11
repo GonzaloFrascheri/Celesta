@@ -192,3 +192,37 @@
 .pagination span {
   font-weight: bold;
 }
+
+/* --- Top 3 Cards --- */
+.topCards {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.topCard {
+  flex: 1;
+  min-width: 120px;
+  background: var(--bg-light);
+  border-radius: 6px;
+  padding: 0.8rem;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+.topCard strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.3rem;
+  color: var(--primary-color);
+}
+.topCard span {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+/* --- Pie Charts Container --- */
+.pieContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}

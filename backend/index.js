@@ -205,6 +205,28 @@ app.get('/api/alertas/metrics/productos', async (_, res) => {
   }
 });
 
+// GET /api/alertas/metrics/proveedores
+app.get('/api/alertas/metrics/proveedores', async (_, res) => {
+  try {
+    // Contamos alertas por proveedor, uniendo Alertas con Compras
+    const sql = `
+      SELECT
+        c.proveedor_id      AS proveedor_id,
+        COUNT(*)            AS total_alertas
+      FROM \`${PROJECT_ID}.${DATASET_ID}.Alertas\`      AS a
+      INNER JOIN \`${PROJECT_ID}.${DATASET_ID}.Compras\` AS c
+        ON a.compra_id = c.id
+      GROUP BY c.proveedor_id
+      ORDER BY total_alertas DESC
+    `;
+    const [rows] = await bigquery.query({ query: sql, location: 'us-central1' });
+    sendSuccess(res, rows);
+  } catch (e) {
+    console.error('Error metrics proveedores:', e);
+    sendError(res, 'Error interno obteniendo métricas por proveedor');
+  }
+});
+
 // --- RUTAS DE CLIENTES (Firestore) ---
 const clientes = db.collection('clientes');
 
