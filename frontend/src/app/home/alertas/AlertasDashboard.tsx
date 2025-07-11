@@ -7,32 +7,19 @@ import styles from './Alertas.module.css';
 // Chart.js
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
   Title,
   Tooltip,
   Legend,
+  ArcElement,
   ChartData,
   ChartOptions
 } from 'chart.js';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(ArcElement, Title, Tooltip, Legend);
 
 // Carga dinámica para no romper SSR
 const Line = dynamic(() => import('react-chartjs-2').then(m => m.Line), { ssr: false });
-const Bar  = dynamic(() => import('react-chartjs-2').then(m => m.Bar),  { ssr: false });
+const Pie  = dynamic(() => import('react-chartjs-2').then(m => m.Pie),  { ssr: false });
 
 interface ProdMetric { producto_maestro_id: string; total_alertas: number; }
 interface ProvMetric { proveedor_id: string;        total_alertas: number; }
@@ -45,7 +32,6 @@ export default function AlertasDashboard() {
   const [byProv,   setByProv]   = useState<ProvMetric[]>([]);
   const [provs,    setProvs]    = useState<ProvInfo[]>([]);
 
-  // 1️⃣ Fetch métricas de productos, diarias y proveedores, y lista de proveedores
   useEffect(() => {
     if (!API) return;
 
@@ -61,7 +47,6 @@ export default function AlertasDashboard() {
       .then(r => r.json()).then(j => j.success && setByProv(j.data))
       .catch(console.error);
 
-    // para mapear id → razon_social
     fetch(`${API}/proveedor`)
       .then(r => r.json()).then(j => j.success && setProvs(j.data))
       .catch(console.error);
@@ -95,17 +80,44 @@ export default function AlertasDashboard() {
     }]
   };
   const lineOptions: ChartOptions<'line'> = {
-    plugins: { title: { display:true, text:'Evolución diaria de alertas' }, legend:{ position:'top' } },
-    scales:   { x:{ title:{ display:true, text:'Día' } }, y:{ beginAtZero:true, ticks:{ stepSize:1 }, title:{ display:true, text:'Alertas' } } }
+    plugins: { title:{ display:true, text:'Evolución diaria de alertas' }, legend:{ position:'top' } },
+    scales:   { y:{ beginAtZero:true, ticks:{ stepSize:1 } } }
   };
 
-  const barData: ChartData<'bar'> = {
+  // Pie para Productos
+  const pieProdData: ChartData<'pie'> = {
     labels: byProduct.map(p => p.producto_maestro_id),
-    datasets: [{ label:'Alertas', data: byProduct.map(p => p.total_alertas) }]
+    datasets: [{
+      data: byProduct.map(p => p.total_alertas),
+      backgroundColor: [
+        'rgba(244, 67, 54, 0.6)',
+        'rgba(255, 235, 59, 0.6)',
+        'rgba(76, 175, 80, 0.6)',
+        'rgba(33, 150, 243, 0.6)',
+        'rgba(156, 39, 176, 0.6)'
+      ]
+    }]
   };
-  const barOptions: ChartOptions<'bar'> = {
-    plugins: { title:{ display:true, text:'Top 5 productos por alertas' }, legend:{ position:'top' } },
-    scales:   { x:{ title:{ display:true, text:'Producto Maestro' } }, y:{ beginAtZero:true, ticks:{ stepSize:1 }, title:{ display:true, text:'Total alertas' } } }
+  const pieProdOptions: ChartOptions<'pie'> = {
+    plugins: { title:{ display:true, text:'Top productos por alertas' }, legend:{ position:'right' } }
+  };
+
+  // Pie para Proveedores (por razon_social)
+  const pieProvData: ChartData<'pie'> = {
+    labels: byProv.map(p => provMap[p.proveedor_id] || p.proveedor_id),
+    datasets: [{
+      data: byProv.map(p => p.total_alertas),
+      backgroundColor: [
+        'rgba(0, 150, 136, 0.6)',
+        'rgba(63, 81, 181, 0.6)',
+        'rgba(255, 152, 0, 0.6)',
+        'rgba(233, 30, 99, 0.6)',
+        'rgba(0, 188, 212, 0.6)'
+      ]
+    }]
+  };
+  const pieProvOptions: ChartOptions<'pie'> = {
+    plugins: { title:{ display:true, text:'Top proveedores por alertas' }, legend:{ position:'right' } }
   };
 
   return (
@@ -158,19 +170,20 @@ export default function AlertasDashboard() {
         </div>
       </section>
 
-      {/* —— GRÁFICAS ENCERRADAS EN UNA CARD —— */}
+       {/* Gráfica diaria + tortas agrupadas en cards */}
       <div className={styles.chartCard}>
-        <h2>Métricas de Alertas</h2>
         <div className={styles.dashboardCharts}>
           <div className={styles.chartContainer}>
             <Line data={lineData} options={lineOptions} />
           </div>
           <div className={styles.chartContainer}>
-            <Bar  data={barData}  options={barOptions}  />
+            <Pie data={pieProdData} options={pieProdOptions} />
+          </div>
+          <div className={styles.chartContainer}>
+            <Pie data={pieProvData} options={pieProvOptions} />
           </div>
         </div>
       </div>
-
     </div>
   );
 }
