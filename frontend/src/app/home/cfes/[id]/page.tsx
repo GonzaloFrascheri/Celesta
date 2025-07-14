@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-// @ts-ignore
 const syntaxStyle = require('react-syntax-highlighter/dist/esm/styles/prism/coy').default;
 import styles from './page.module.css';
 
@@ -212,16 +211,6 @@ export default function CFEPage() {
           </div>
         </section>
       )}
-
-      {/* Contenido XML */}
-      <section className={styles.section}>
-        <h2>Contenido XML</h2>
-        <div className={styles.xmlContainer}>
-          <SyntaxHighlighter language="xml" style={syntaxStyle} showLineNumbers>
-            {cfe.contenido_xml}
-          </SyntaxHighlighter>
-        </div>
-      </section>
 
       {/* Descargar al final */}
       <div className={styles.actions}>
