@@ -97,9 +97,18 @@ export default function AlertasDashboard() {
       pointRadius: 4
     }]
   };
+
+  // Opciones para el gráfico de líneas
   const lineOptions: ChartOptions<'line'> = {
-    plugins: { title:{ display:true, text:'Evolución diaria de alertas' }, legend:{ position:'top' } },
-    scales:   { y:{ beginAtZero:true, ticks:{ stepSize:1 } } }
+    responsive: true,
+    plugins: {
+      legend: { display: true, position: 'top' },
+      title: { display: true, text: 'Alertas diarias' }
+    },
+    scales: {
+      x: { title: { display: true, text: 'Fecha' } },
+      y: { title: { display: true, text: 'Cantidad de alertas' }, beginAtZero: true }
+    }
   };
 
   // Pie para Productos
@@ -117,7 +126,7 @@ export default function AlertasDashboard() {
     }]
   };
   const pieProdOptions: ChartOptions<'pie'> = {
-    plugins: { title:{ display:true, text:'Top productos por alertas' }, legend:{ position:'right' } }
+    plugins: { title:{ display:true, text:'Top 3 productos por alertas' }, legend:{ position:'right' } }
   };
 
   // Pie para Proveedores (por razon_social)
@@ -135,7 +144,7 @@ export default function AlertasDashboard() {
     }]
   };
   const pieProvOptions: ChartOptions<'pie'> = {
-    plugins: { title:{ display:true, text:'Top proveedores por alertas' }, legend:{ position:'right' } }
+    plugins: { title:{ display:true, text:'Top 3 proveedores por alertas' }, legend:{ position:'right' } }
   };
 
   return (
@@ -154,39 +163,7 @@ export default function AlertasDashboard() {
             ?.total_alertas ?? 0
           }</p>
         </div>
-        <div className={styles.kpiCard}>
-          <h3>Promedio diario</h3>
-          <p>{ (daily.reduce((s,d)=>s+d.total_alertas,0)/(daily.length||1)).toFixed(1) }</p>
-        </div>
       </div>
-
-      {/* —— TOP 3 PRODUCTOS —— */}
-      <section className={styles.top3Section}>
-        <h2>Top 3 Productos con más alertas</h2>
-        <div className={styles.top3Container}>
-          {byProduct.slice(0,3).map(p => (
-            <div key={p.producto_maestro_id} className={styles.top3Card}>
-              <span className={styles.top3Title}>{p.producto_maestro_id}</span>
-              <span>{p.total_alertas} alertas</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* —— TOP 3 PROVEEDORES —— */}
-      <section className={styles.top3Section}>
-        <h2>Top 3 Proveedores con más alertas</h2>
-        <div className={styles.top3Container}>
-          {byProv.slice(0,3).map(p => (
-            <div key={p.proveedor_id} className={styles.top3Card}>
-              <span className={styles.top3Title}>
-                { provMap[p.proveedor_id] || p.proveedor_id }
-              </span>
-              <span>{p.total_alertas} alertas</span>
-            </div>
-          ))}
-        </div>
-      </section>
 
        {/* Gráfica diaria + tortas agrupadas en cards */}
       <div className={styles.chartCard}>
