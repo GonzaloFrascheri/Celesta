@@ -3,19 +3,37 @@
 import { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import styles from './Alertas.module.css';
+import 'chart.js/auto';
 
-// Chart.js
 import {
   Chart as ChartJS,
+  CategoryScale,   // <- escala X para gráficos de línea
+  LinearScale,     // <- escala Y (linear)
+  PointElement,    // <- puntos de la línea
+  LineElement,     // <- la propia línea
+  ArcElement,      // <- para pie / doughnut
+  LineController,  // <— IMPORTAR aquí
+  PieController,
   Title,
   Tooltip,
   Legend,
-  ArcElement,
   ChartData,
   ChartOptions
 } from 'chart.js';
 
-ChartJS.register(ArcElement, Title, Tooltip, Legend);
+// 2️⃣ Registra las piezas
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  ArcElement,
+  LineController,
+  PieController,
+  Title,
+  Tooltip,
+  Legend
+);
 
 // Carga dinámica para no romper SSR
 const Line = dynamic(() => import('react-chartjs-2').then(m => m.Line), { ssr: false });
