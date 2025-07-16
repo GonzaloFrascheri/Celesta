@@ -36,6 +36,8 @@ export default function HomePage() {
   const [dashboard, setDashboard] = useState(null);
   const [loadingDashboard, setLoadingDashboard] = useState(true);
 
+  const API = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!loading && !user) {
@@ -47,7 +49,7 @@ export default function HomePage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const res = await fetch('/api/dashboard/summary');
+        const res = await fetch(`${API}/api/dashboard/summary`);
         const json = await res.json();
         if (json.success) {
           setDashboard(json.data);
