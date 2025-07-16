@@ -98,10 +98,9 @@ export default function Sidebar({ onLinkClick }) {
           )}
         </li>
         <li className={styles.navItemWithBadge}>
-          <Link href="/home/cfes" className={styles.navLink} onClick={onLinkClick}>
-            CFEs
+          <Link href="/home/facturas" className={styles.navLink} onClick={onLinkClick}>
+            Facturas recibidas
           </Link>
-          {cfeCount > 0 && <span className={styles.badge}>{cfeCount}</span>}
         </li>
       </ul>
     </aside>

@@ -103,7 +103,7 @@ export default function CFEPage() {
       {/* Breadcrumb */}
       <nav className={styles.breadcrumb} aria-label="breadcrumbs">
         <Link href="/home">Inicio</Link><span>/</span>
-        <Link href="/home/cfes">CFEs</Link><span>/</span>
+        <Link href="/home/facturas">Facturas Recibidas</Link><span>/</span>
         <span>Detalle #{cfe.numero_cfe}</span>
       </nav>
 
