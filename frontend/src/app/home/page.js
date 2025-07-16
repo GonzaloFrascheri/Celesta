@@ -3,139 +3,57 @@
 
 import { useAuth } from '../../../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import styles from './HomePage.module.css';
-import { FaChartLine, FaTags, FaBell } from 'react-icons/fa';
-// React Chart.js imports
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
-
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import { useEffect } from 'react';
+import styles from './HomePage.module.css'; // Importamos nuestros nuevos estilos
+import { FaChartLine, FaTags, FaBell } from 'react-icons/fa'; // Importamos los íconos
 
 export default function HomePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [dashboard, setDashboard] = useState(null);
-  const [loadingDashboard, setLoadingDashboard] = useState(true);
 
-  const API = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-  // Redirect if not authenticated
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
 
-  // Fetch dashboard summary
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const res = await fetch(`${API}/api/dashboard/summary`);
-        const json = await res.json();
-        if (json.success) {
-          setDashboard(json.data);
-        } else {
-          console.error('Error al cargar dashboard:', json.error);
-        }
-      } catch (err) {
-        console.error('Fetch error:', err);
-      } finally {
-        setLoadingDashboard(false);
-      }
-    }
-    loadDashboard();
-  }, []);
-
   if (loading || !user) {
-    return <div className={styles.fullScreenLoader}>Cargando o redirigiendo...</div>;
+    return <div>Cargando o redirigiendo...</div>;
   }
-
-  if (loadingDashboard || !dashboard) {
-    return <div className={styles.fullScreenLoader}>Cargando datos del dashboard...</div>;
-  }
-
-  const { summary, monthly, byCategory } = dashboard;
-  const labels = monthly.map(m => m.mes);
-  const dataValues = monthly.map(m => m.monto);
-
-  const chartData = {
-    labels,
-    datasets: [
-      {
-        label: 'Monto mensual',
-        data: dataValues,
-        fill: false,
-        tension: 0.4
-      }
-    ]
-  };
 
   return (
     <div>
-      <main className={styles.pageContent}>
-        {/* KPI Cards */}
-        <div className={styles.kpiGrid}>
-          <div className={styles.kpiCard}>
-            <h3>Total Comprado</h3>
-            <p>${summary.totalComprado.toLocaleString()}</p>
-          </div>
-          <div className={styles.kpiCard}>
-            <h3>Total Facturas</h3>
-            <p>{summary.totalFacturas}</p>
-          </div>
-          <div className={styles.kpiCard}>
-            <h3>Categorías Analizadas</h3>
-            <p>{byCategory.length}</p>
-          </div>
-        </div>
+      <main>
+        <div className={styles.welcomeCard}>
+          <h1 className={styles.mainTitle}>Bienvenido a Celesta</h1>
+          <p className={styles.subtitle}>
+            Tu socio digital para la gestión inteligente de compras.
+          </p>
+          <hr className={styles.divider} />
 
-        {/* Evolución Mensual */}
-        <div className={styles.chartContainer}>
-          <Line
-            data={chartData}
-            options={{
-              responsive: true,
-              plugins: {
-                legend: { position: 'top' },
-                title: { display: true, text: 'Evolución de Compras Mensual' }
-              }
-            }}
-          />
-        </div>
+          {/* Sección de Funcionalidades Clave con Íconos */}
+          <div className={styles.featureGrid}>
+            <div className={styles.featureItem}>
+              <FaChartLine className={styles.featureIcon} />
+              <span>Monitoreo del historial de precios.</span>
+            </div>
+            <div className={styles.featureItem}>
+              <FaTags className={styles.featureIcon} />
+              <span>Categorización automática de compras.</span>
+            </div>
+            <div className={styles.featureItem}>
+              <FaBell className={styles.featureIcon} />
+              <span>Alertas inteligentes ante fluctuaciones.</span>
+            </div>
+          </div>
 
-        {/* Fallback: funcionalidades clave */}
-        <div className={styles.featureGrid}>
-          <div className={styles.featureItem}>
-            <FaChartLine className={styles.featureIcon} />
-            <span>Monitoreo del historial de precios.</span>
+          {/* Sección de Llamada a la Acción */}
+          <div className={styles.ctaBox}>
+            <p style={{ margin: 0, fontWeight: 500 }}>
+              Utiliza el menú de la izquierda para registrar tu primera compra o explorar tus proveedores y categorías.
+            </p>
           </div>
-          <div className={styles.featureItem}>
-            <FaTags className={styles.featureIcon} />
-            <span>Categorización automática de compras.</span>
-          </div>
-          <div className={styles.featureItem}>
-            <FaBell className={styles.featureIcon} />
-            <span>Alertas inteligentes ante fluctuaciones.</span>
-          </div>
+
         </div>
       </main>
     </div>

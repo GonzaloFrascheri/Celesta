@@ -150,61 +150,6 @@ app.get('/api/notifications/stream', async (req, res) => {
   });
 });
 
-// GET /api/dashboard/summary
-app.get('/api/dashboard/summary', async (req, res) => {
-  try {
-    // 1) Total comprado y número de facturas
-    const [sumCount] = await bigquery.query({
-      query: `
-        SELECT 
-          SUM(monto_total)    AS totalComprado, 
-          COUNT(*)            AS totalFacturas
-        FROM \`${DATASET_ID}.Compras\`
-      `,
-      location: 'us-central1'
-    });
-
-    // 2) Evolución mensual de compras
-    const [monthly] = await bigquery.query({
-      query: `
-        SELECT 
-          FORMAT_TIMESTAMP('%Y-%m', TIMESTAMP(created_at)) AS mes,
-          SUM(monto_total)                               AS monto
-        FROM \`${DATASET_ID}.Compras\`
-        GROUP BY mes
-        ORDER BY mes
-      `,
-      location: 'us-central1'
-    });
-
-    // 3) Distribución por categoría (opcional)
-    const [byCategory] = await bigquery.query({
-      query: `
-        SELECT 
-          categoria_id,
-          SUM(monto_total) AS monto
-        FROM \`${DATASET_ID}.Compras\` AS c
-        JOIN \`${DATASET_ID}.Detalles_Compras\` AS d
-          ON c.id = d.compra_id
-        GROUP BY categoria_id
-      `,
-      location: 'us-central1'
-    });
-
-    res.json({
-      success: true,
-      data: {
-        summary: sumCount[0],
-        monthly,
-        byCategory
-      }
-    });
-  } catch (err) {
-    console.error('Error en /api/dashboard/summary:', err);
-    res.status(500).json({ success: false, error: 'Error interno obteniendo resumen' });
-  }
-});
-
 
 // ===================================================================
 // === NUEVO ENDPOINT DE MACHINE LEARNING ============================
