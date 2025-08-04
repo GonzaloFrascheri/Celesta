@@ -8,14 +8,49 @@
   font-size: 1.8rem;
   text-align: center;
 }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
 .search {
-  width: 100%;
+  flex: 1 1 300px;
   padding: 0.5rem 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
 }
+
+.dateFilters {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.dateFilter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dateInput {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: white;
+}
+
 .list {
   list-style: none;
   padding: 0;

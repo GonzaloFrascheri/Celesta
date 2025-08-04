@@ -89,9 +89,10 @@ export default function CFEsPage() {
           className={styles.search}
         />
         <div className={styles.dateFilters}>
-          <label>
-            Desde:
+          <div className={styles.dateFilter}>
+            <label htmlFor="startDate">Desde:</label>
             <input
+              id="startDate"
               type="date"
               value={startDate}
               onChange={(e) => {
@@ -100,10 +101,11 @@ export default function CFEsPage() {
               }}
               className={styles.dateInput}
             />
-          </label>
-          <label>
-            Hasta:
+          </div>
+          <div className={styles.dateFilter}>
+            <label htmlFor="endDate">Hasta:</label>
             <input
+              id="endDate"
               type="date"
               value={endDate}
               onChange={(e) => {
@@ -112,7 +114,7 @@ export default function CFEsPage() {
               }}
               className={styles.dateInput}
             />
-          </label>
+          </div>
         </div>
       </div>
 
