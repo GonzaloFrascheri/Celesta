@@ -46,13 +46,13 @@ const CFEItemPreview = ({ xmlContent }: { xmlContent: string }) => {
       const itemNode = xmlDoc.querySelector("Detalle > Item");
 
       if (itemNode) {
-        const nombre = itemNode.querySelector("NmbItem")?.textContent?.trim() || 'Ítem sin nombre';
+        const nombre = itemNode.querySelector("NomItem")?.textContent?.trim() || 'Ítem sin nombre';
         const cantidad = itemNode.querySelector("Cantidad")?.textContent?.trim() || 'N/A';
         const monto = itemNode.querySelector("MontoItem")?.textContent?.trim() || 'N/A';
         const monedaNode = xmlDoc.querySelector("Encabezado > IdDoc > Moneda");
         const moneda = monedaNode?.textContent?.trim() || '$';
 
-        setPreview(`${nombre}, ${cantidad} un., ${moneda} ${monto} IVA incl.`);
+        setPreview(`1er Ítem: ${nombre} (Cant: ${cantidad}, Total: ${moneda} ${monto})`);
       } else {
         setPreview('Factura sin ítems detallados.');
       }
