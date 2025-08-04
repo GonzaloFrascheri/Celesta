@@ -62,18 +62,36 @@
   padding: 1rem;
   margin-bottom: 1rem;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-.cardTitle {
-  margin: 0 0 0.5rem;
-  font-size: 1.1rem;
+.cardContent {
+  flex: 1;
+}
+.cardHeader {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+.cardHeaderLine {
+  display: flex;
+  justify-content: space-between;
+  max-width: 350px;
+}
+.cardHeaderLine + .cardHeaderLine {
+  margin-top: 0.25rem;
+}
+.label {
+  font-weight: 600;
+  margin-right: 0.5rem;
   color: #333;
 }
-.separator {
-  color: #777;
-}
-.cardText {
-  margin: 0.3rem 0 0.8rem;
+.cardSubtitle {
+  margin: 0.5rem 0 0;
   color: #555;
+  font-style: italic;
+  font-size: 0.9rem;
 }
 .button {
   display: inline-block;
@@ -83,6 +101,7 @@
   border-radius: 4px;
   text-decoration: none;
   font-size: 0.9rem;
+  margin-left: 1rem;
 }
 .pagination {
   display: flex;

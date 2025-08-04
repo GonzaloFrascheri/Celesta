@@ -3,8 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-const syntaxStyle = require('react-syntax-highlighter/dist/esm/styles/prism/coy').default;
 import styles from './page.module.css';
 
 interface CFE {
@@ -26,6 +24,21 @@ interface CFE {
   fecha_caratula:        string | null;
   contenido_xml: string;
 }
+
+const getCFETypeName = (tipo: number | null): string => {
+  if (tipo === null) return 'Desconocido';
+  const cfeTypes: { [key: number]: string } = {
+    101: 'e-Ticket',
+    102: 'Nota de Crédito de e-Ticket',
+    103: 'Nota de Débito de e-Ticket',
+    111: 'e-Factura',
+    112: 'Nota de Crédito de e-Factura',
+    113: 'Nota de Débito de e-Factura',
+    181: 'e-Remito',
+    182: 'e-Resguardo',
+  };
+  return cfeTypes[tipo] || `Tipo ${tipo}`;
+};
 
 
 export default function CFEPage() {
@@ -55,26 +68,62 @@ export default function CFEPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // 2) Extraigo líneas de detalle del XML
-  const items = useMemo(() => {
-    if (!cfe) return [];
+  // 2) Extraigo datos y líneas de detalle del XML
+  const { parsedTotals, items } = useMemo(() => {
+    if (!cfe) return { parsedTotals: null, items: [] };
+
     try {
       const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(cfe.contenido_xml, 'application/xml');
-      const nodos = Array.from(xmlDoc.getElementsByTagNameNS('*', 'Item'));
-      return nodos.map(node => ({
-        nro:      node.getElementsByTagNameNS('*','NroLinDet')[0]?.textContent,
-        nombre:   node.getElementsByTagNameNS('*','NomItem')[0]?.textContent,
-        cantidad: node.getElementsByTagNameNS('*','Cantidad')[0]?.textContent,
-        precio:   node.getElementsByTagNameNS('*','PrecioUnitario')[0]?.textContent,
-        monto:    node.getElementsByTagNameNS('*','MontoItem')[0]?.textContent,
+      const xmlDoc = parser.parseFromString(cfe.contenido_xml, "application/xml");
+
+      const getText = (tagName: string, context: Document | Element = xmlDoc) =>
+        context.getElementsByTagNameNS('*', tagName)[0]?.textContent ?? null;
+
+      const getMonto = (tagName: string, context: Document | Element = xmlDoc) =>
+        parseFloat(getText(tagName, context) || '0');
+
+      // Totales
+      const mntNetoIvaTasaBasica = getMonto('MntNetoIvaTasaBasica');
+      const mntNetoIvaTasaMinima = getMonto('MntNetoIvaTasaMinima');
+      const mntNoGrv = getMonto('MntNoGrv');
+      const montoNeto = mntNetoIvaTasaBasica + mntNetoIvaTasaMinima + mntNoGrv;
+
+      const ivaTasaBasica = getMonto('MntIVATasaBasica');
+      const ivaTasaMinima = getMonto('MntIVATasaMinima');
+      const montoIVA = ivaTasaBasica + ivaTasaMinima;
+
+      const fechaVencimientoNode = xmlDoc.getElementsByTagNameNS('*', 'FchVenc')[0];
+      const fechaVencimiento = fechaVencimientoNode?.textContent
+        ? new Date(fechaVencimientoNode.textContent).toLocaleDateString('es-UY')
+        : null;
+
+      const parsedTotals = {
+        tipoCFETexto: getCFETypeName(cfe.tipo_cfe),
+        fechaVencimiento,
+        montoNeto: montoNeto.toFixed(2),
+        montoIVA: montoIVA.toFixed(2),
+      };
+
+      // Items
+      const itemNodes = Array.from(xmlDoc.getElementsByTagNameNS('*', 'Item'));
+      const items = itemNodes.map(node => ({
+        nro:      getText('NroLinDet', node),
+        nombre:   getText('NomItem', node),
+        cantidad: getText('Cantidad', node),
+        precio:   getText('PrecioUnitario', node),
+        monto:    getText('MontoItem', node),
+        tasaIVA:  getText('TasaIVA', node),
       }));
-    } catch {
-      return [];
+
+      return { parsedTotals, items };
+    } catch (e) {
+      console.error("Error parsing CFE XML:", e);
+      return { parsedTotals: null, items: [] };
     }
   }, [cfe]);
 
-  // 3) Función para descargar XML
+
+  // Función para descargar XML
   const downloadXml = () => {
     if (!cfe) return;
     const blob = new Blob([cfe.contenido_xml], { type: 'application/xml' });
@@ -104,31 +153,10 @@ export default function CFEPage() {
       <nav className={styles.breadcrumb} aria-label="breadcrumbs">
         <Link href="/home">Inicio</Link><span>/</span>
         <Link href="/home/cfes">Facturas Recibidas</Link><span>/</span>
-        <span>Detalle #{cfe.numero_cfe}</span>
+        <span>{parsedTotals?.tipoCFETexto} #{cfe.numero_cfe}</span>
       </nav>
 
-      <h1>Detalle CFE #{cfe.numero_cfe}</h1>
-
-      {/* Encabezado */}
-      <section className={styles.section}>
-        <h2>Encabezado</h2>
-        <div className={styles.tableResponsive}>
-          <table role="table" aria-label="Datos generales del CFE">
-            <tbody>
-              {[
-                ['ID interno', cfe.id],
-                ['Archivo origen', cfe.nombre_archivo_original],
-                ['Procesado el', new Date(cfe.fecha_procesamiento.value).toLocaleString()],
-              ].map(([k, v]) => (
-                <tr key={k}>
-                  <th>{k}</th>
-                  <td>{v}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <h1>{parsedTotals?.tipoCFETexto} #{cfe.numero_cfe}</h1>
 
       {/* Carátula */}
       <section className={styles.section}>
@@ -136,54 +164,66 @@ export default function CFEPage() {
         <div className={styles.tableResponsive}>
           <table>
             <tbody>
-              {[
-                ['RUT Emisor',           cfe.emisor_rut],
-                ['Nombre Emisor',        cfe.emisor_nombre],
-                ['RUT Receptor',         cfe.receptor_rut],
-                ['RUT Receptor (carátula)', cfe.rut_receptor_caratula],
-                ['RUC Emisor (carátula)',   cfe.ruc_emisor_caratula],
-                ['Cantidad CFE',         cfe.cantidad_cfe != null
-                                            ? cfe.cantidad_cfe 
-                                            : '—'],
-                ['Fecha Carátula',       cfe.fecha_caratula
-                                            ? new Date(cfe.fecha_caratula).toLocaleString()
-                                            : '—'],
-              ].map(([label, val]) => (
-                <tr key={label}>
-                  <th>{label}</th>
-                  <td>{val ?? '—'}</td>
-                </tr>
-              ))}
+              <tr>
+                <th>Emisor</th>
+                <td>{`${cfe.emisor_nombre || 'N/A'} (${cfe.emisor_rut || 'N/A'})`}</td>
+              </tr>
+              <tr>
+                <th>Receptor</th>
+                <td>{cfe.receptor_rut ?? '—'}</td>
+              </tr>
+              <tr>
+                <th>Cantidad de CFEs</th>
+                <td>{cfe.cantidad_cfe ?? '—'}</td>
+              </tr>
+              <tr>
+                <th>Fecha Carátula</th>
+                <td>{cfe.fecha_caratula ? new Date(cfe.fecha_caratula).toLocaleString('es-UY') : '—'}</td>
+              </tr>
             </tbody>
           </table>
         </div>
       </section>
 
       {/* Totales */}
-      <section className={styles.section}>
-        <h2>Totales</h2>
-        <div className={styles.tableResponsive}>
-          <table role="table" aria-label="Totales del CFE">
-            <tbody>
-              {[
-                ['Tipo CFE',     cfe.tipo_cfe],
-                ['Serie',        cfe.serie_cfe],
-                ['Número',       cfe.numero_cfe],
-                ['Fecha emisión', cfe.fecha_emision
-                   ? new Date(cfe.fecha_emision.value).toLocaleDateString()
-                   : '—'],
-                ['Monto total',  cfe.monto_total != null
-                   ? `${cfe.monto_total} ${cfe.moneda}` : '—'],
-              ].map(([k, v]) => (
-                <tr key={k} className={k === 'Monto total' ? styles.highlight : ''}>
-                  <th>{k}</th>
-                  <td>{v}</td>
+      {parsedTotals && (
+        <section className={styles.section}>
+          <h2>Totales</h2>
+          <div className={styles.tableResponsive}>
+            <table role="table" aria-label="Totales del CFE">
+              <tbody>
+                <tr>
+                  <th>Tipo CFE</th>
+                  <td>{parsedTotals.tipoCFETexto}</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                <tr>
+                  <th>Serie y Número</th>
+                  <td>{`${cfe.serie_cfe} - ${cfe.numero_cfe}`}</td>
+                </tr>
+                <tr>
+                  <th>Fecha emisión</th>
+                  <td>{cfe.fecha_emision ? new Date(cfe.fecha_emision.value).toLocaleDateString('es-UY') : '—'}</td>
+                </tr>
+                {parsedTotals.fechaVencimiento && (
+                  <tr><th>Fecha vencimiento</th><td>{parsedTotals.fechaVencimiento}</td></tr>
+                )}
+                <tr>
+                  <th>Monto Neto</th>
+                  <td>{`${cfe.moneda || '$'} ${parsedTotals.montoNeto}`}</td>
+                </tr>
+                <tr>
+                  <th>IVA</th>
+                  <td>{`${cfe.moneda || '$'} ${parsedTotals.montoIVA}`}</td>
+                </tr>
+                <tr className={styles.highlight}>
+                  <th>Monto Total</th>
+                  <td>{cfe.monto_total != null ? `${cfe.moneda || '$'} ${cfe.monto_total.toFixed(2)}` : '—'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Líneas de detalle */}
       {items.length > 0 && (
@@ -193,17 +233,18 @@ export default function CFEPage() {
             <table role="table" aria-label="Detalle de ítems">
               <thead>
                 <tr>
-                  <th>Nro</th><th>Ítem</th><th>Cantidad</th><th>Precio unit.</th><th>Monto</th>
+                  <th>Nro</th><th>Ítem</th><th>Cantidad</th><th>Precio unit.</th><th>% IVA</th><th>Monto</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((it, i) => (
                   <tr key={i}>
-                    <td data-label="Nro">{it.nro}</td>
-                    <td data-label="Ítem">{it.nombre}</td>
-                    <td data-label="Cantidad">{it.cantidad}</td>
-                    <td data-label="Precio unit.">{it.precio}</td>
-                    <td data-label="Monto">{it.monto}</td>
+                    <td data-label="Nro">{it.nro ?? '—'}</td>
+                    <td data-label="Ítem">{it.nombre ?? '—'}</td>
+                    <td data-label="Cantidad">{it.cantidad ?? '—'}</td>
+                    <td data-label="Precio unit.">{it.precio ?? '—'}</td>
+                    <td data-label="% IVA">{it.tasaIVA ?? '—'}</td>
+                    <td data-label="Monto">{it.monto ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

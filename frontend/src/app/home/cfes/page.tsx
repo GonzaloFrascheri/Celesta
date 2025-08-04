@@ -27,6 +27,44 @@ interface CFE {
 // Helper to format date to YYYY-MM-DD
 const toYYYYMMDD = (date: Date) => date.toISOString().split('T')[0];
 
+const CFEItemPreview = ({ xmlContent }: { xmlContent: string }) => {
+  const [preview, setPreview] = useState('Cargando vista previa...');
+
+  useEffect(() => {
+    // This code runs on the client, so DOMParser is available.
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlContent, "application/xml");
+
+      const parseError = xmlDoc.querySelector("parsererror");
+      if (parseError) {
+        console.error("Error al analizar XML:", parseError.textContent);
+        setPreview('No se pudo procesar el detalle.');
+        return;
+      }
+
+      const itemNode = xmlDoc.querySelector("Detalle > Item");
+
+      if (itemNode) {
+        const nombre = itemNode.querySelector("NmbItem")?.textContent?.trim() || 'Ítem sin nombre';
+        const cantidad = itemNode.querySelector("Cantidad")?.textContent?.trim() || 'N/A';
+        const monto = itemNode.querySelector("MontoItem")?.textContent?.trim() || 'N/A';
+        const monedaNode = xmlDoc.querySelector("Encabezado > IdDoc > Moneda");
+        const moneda = monedaNode?.textContent?.trim() || '$';
+
+        setPreview(`${nombre}, ${cantidad} un., ${moneda} ${monto} IVA incl.`);
+      } else {
+        setPreview('Factura sin ítems detallados.');
+      }
+    } catch (error) {
+      console.error("Error al analizar XML del CFE:", error);
+      setPreview('Error al procesar el detalle.');
+    }
+  }, [xmlContent]);
+
+  return <p className={styles.cardSubtitle}>{preview}</p>;
+};
+
 export default function CFEsPage() {
   const [cfes, setCfes]         = useState<CFE[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -123,12 +161,19 @@ export default function CFEsPage() {
       <ul className={styles.list}>
         {paginated.map(cfe => (
           <li key={cfe.id} className={styles.card}>
-            {/* Título con RUT emisor y fecha/hora */}
-            <h3 className={styles.cardTitle}>
-              {cfe.emisor_rut || '—'}{' '}
-              <span className={styles.separator}>·</span>{' '}
-              {new Date(cfe.fecha_procesamiento.value).toLocaleString()}
-            </h3>
+            <div className={styles.cardContent}>
+              <div className={styles.cardHeader}>
+                <div className={styles.cardHeaderLine}>
+                  <span className={styles.label}>RUT Emisor:</span>
+                  <span>{cfe.emisor_rut || '—'}</span>
+                </div>
+                <div className={styles.cardHeaderLine}>
+                  <span className={styles.label}>Fecha:</span>
+                  <span>{new Date(cfe.fecha_procesamiento.value).toLocaleString('es-UY')}</span>
+                </div>
+              </div>
+              <CFEItemPreview xmlContent={cfe.contenido_xml} />
+            </div>
             <Link href={`/home/cfes/${cfe.id}`} className={styles.button}>
               Ver detalle
             </Link>
