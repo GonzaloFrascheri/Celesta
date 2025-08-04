@@ -24,11 +24,23 @@ interface CFE {
   contenido_xml: string;
 }
 
+// Helper to format date to YYYY-MM-DD
+const toYYYYMMDD = (date: Date) => date.toISOString().split('T')[0];
+
 export default function CFEsPage() {
   const [cfes, setCfes]         = useState<CFE[]>([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
-  const [page,   setPage]       = useState(1);
+
+  // State for date range filter
+  const today = new Date();
+  const fifteenDaysAgo = new Date();
+  fifteenDaysAgo.setDate(today.getDate() - 15);
+
+  const [startDate, setStartDate] = useState<string>(toYYYYMMDD(fifteenDaysAgo));
+  const [endDate, setEndDate] = useState<string>(toYYYYMMDD(today));
+
+  const [page, setPage] = useState(1);
   const perPage = 5;
 
   useEffect(() => {
@@ -41,34 +53,70 @@ export default function CFEsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // filtro por emisor o receptor
+  // filtro por emisor, receptor y rango de fechas
   const term = search.trim().toLowerCase();
-  const filtered = cfes.filter(c =>
-    (c.emisor_rut    || '').toLowerCase().includes(term) ||
-    (c.receptor_rut  || '').toLowerCase().includes(term)
-  );
+  const filtered = cfes.filter(c => {
+    const matchesSearch =
+      (c.emisor_rut    || '').toLowerCase().includes(term) ||
+      (c.receptor_rut  || '').toLowerCase().includes(term);
+
+    const cfeDate = c.fecha_procesamiento.value.substring(0, 10); // YYYY-MM-DD
+    const matchesDate =
+      (!startDate || cfeDate >= startDate) &&
+      (!endDate || cfeDate <= endDate);
+
+    return matchesSearch && matchesDate;
+  });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paginated  = filtered.slice((page-1)*perPage, page*perPage);
 
-  if (loading) return <p>Cargando CFEs…</p>;
+  if (loading) return <p>Cargando Facturas Recibidas…</p>;
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>Listado de CFEs</h1>
+      <h1 className={styles.title}>Listado de Facturas Recibidas</h1>
 
-      <input
-        type="text"
-        placeholder="🔍 Buscar por RUT emisor o receptor…"
-        value={search}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => {
-          setSearch(e.target.value);
-          setPage(1);
-        }}
-        className={styles.search}
-      />
+      <div className={styles.filters}>
+        <input
+          type="text"
+          placeholder="🔍 Buscar por RUT emisor o receptor…"
+          value={search}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          className={styles.search}
+        />
+        <div className={styles.dateFilters}>
+          <label>
+            Desde:
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setPage(1);
+              }}
+              className={styles.dateInput}
+            />
+          </label>
+          <label>
+            Hasta:
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setPage(1);
+              }}
+              className={styles.dateInput}
+            />
+          </label>
+        </div>
+      </div>
 
-      {filtered.length === 0 && <p>No se encontraron CFEs.</p>}
+      {filtered.length === 0 && <p>No se encontraron Facturas Recibidas para los filtros seleccionados.</p>}
 
       <ul className={styles.list}>
         {paginated.map(cfe => (
