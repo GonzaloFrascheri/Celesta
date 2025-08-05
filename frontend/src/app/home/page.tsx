@@ -165,17 +165,23 @@ export default function HomePage() {
   >([]);
 
   useEffect(() => {
-    // 1. Alertas que requieren atención
-    // TODO: Reemplazar con el fetch real a tu API de alertas
-    // fetch(`${process.env.NEXT_PUBLIC_API_URL}/alerts`)
-    //   .then(res => res.json())
-    //   .then(json => {
-    //     const unreadAlerts = json.data.items.filter((alert: Alert) => !alert.leida).length;
-    //     setStats(prev => ({ ...prev, alerts: unreadAlerts }));
-    //   });
-    setStats(prev => ({ ...prev, alerts: 5 })); // Valor de ejemplo mientras tanto
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/cfes?limit=2000`) // Aumentamos el límite para tener más datos
+    // 1. Cargar Alertas no leídas
+    fetch(`${API_URL}/alertas`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data)) {
+          const unreadAlerts = json.data.filter(
+            (alert: Alert) => !alert.leida
+          ).length;
+          setStats((prev) => ({ ...prev, alerts: unreadAlerts }));
+        }
+      })
+      .catch((err) => console.error("Error al cargar alertas:", err));
+
+    // 2. Cargar datos de facturas (CFEs)
+    fetch(`${API_URL}/cfes?limit=2000`) // Aumentamos el límite para tener más datos
       .then(res => res.json())
       .then(json => {
         if (json.success) {
