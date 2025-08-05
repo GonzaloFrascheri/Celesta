@@ -205,7 +205,7 @@ export default function HomePage() {
           const monthlyPurchases: { [key: string]: number } = {};
           const monthLabels: string[] = [];
           
-          for (let i = 5; i >= 0; i--) {
+          for (let i = 12; i >= 0; i--) {
             const d = new Date();
             d.setMonth(d.getMonth() - i);
             const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -248,42 +248,6 @@ export default function HomePage() {
             .slice(0, 10)
             .map(([name, total]) => ({ name, total }));
           setTopProviders(sortedProviders);
-
-          // Top 5 Productos (este mes)
-          const productTotals = new Map<string, number>();
-          invoicesThisMonth.forEach(cfe => {
-            cfe.detalles?.items.forEach(item => {
-              if (item.nombre_item && item.monto_item) {
-                const currentTotal = productTotals.get(item.nombre_item) || 0;
-                productTotals.set(item.nombre_item, currentTotal + item.monto_item);
-              }
-            });
-          });
-          const sortedProducts = Array.from(productTotals.entries())
-            .sort(([, totalA], [, totalB]) => totalB - totalA)
-            .slice(0, 5);
-
-          setTopProductsData({
-            labels: sortedProducts.map(([name]) => name),
-            datasets: [
-              {
-                label: 'Monto Total Comprado',
-                data: sortedProducts.map(([, total]) => total),
-                backgroundColor: [
-                  'rgba(54, 162, 235, 0.6)',
-                  'rgba(75, 192, 192, 0.6)',
-                  'rgba(255, 206, 86, 0.6)',
-                  'rgba(255, 159, 64, 0.6)',
-                  'rgba(153, 102, 255, 0.6)',
-                ],
-                borderColor: [
-                  'rgba(54, 162, 235, 1)',
-                  'rgba(75, 192, 192, 1)',
-                ],
-                borderWidth: 1,
-              },
-            ],
-          });
         }
       })
       .catch(console.error)
@@ -327,10 +291,6 @@ export default function HomePage() {
         <div className={styles.sideSection}>
           <h2 className={styles.sectionTitle}>Top 10 Proveedores este mes</h2>
           <TopProvidersList providers={topProviders} />
-        </div>
-        <div className={styles.sideSection}>
-          <h2 className={styles.sectionTitle}>Top 5 Productos este mes</h2>
-          <TopProductsChart data={topProductsData} />
         </div>
       </div>
     </div>
