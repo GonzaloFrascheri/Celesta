@@ -148,7 +148,7 @@ const TopProvidersList = ({
 export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    invoicesThisMonth: 0,
+    totalInvoices: 0,
     xmlsThisMonth: 0,
     alerts: 0, // Se calculará desde la API
   });
@@ -197,7 +197,7 @@ export default function HomePage() {
           // Tarjetas de Resumen
           setStats(prev => ({
             ...prev,
-            invoicesThisMonth: invoicesThisMonth.length,
+            totalInvoices: json.data.total || cfes.length,
             xmlsThisMonth: invoicesThisMonth.length,
           }));
 
@@ -265,8 +265,8 @@ export default function HomePage() {
       
       <div className={styles.cardsGrid}>
         <DashboardCard 
-          title="Facturas de este mes" 
-          value={stats.invoicesThisMonth}
+          title="Facturas totales recibidas" 
+          value={stats.totalInvoices}
           icon="📄" 
         />
         <DashboardCard 
