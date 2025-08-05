@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -11,7 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import styles from '../../app/home/HomePage.module.css';
+import styles from './HomePage.module.css';
 
 // Registramos los componentes de Chart.js que vamos a utilizar
 ChartJS.register(
@@ -23,10 +23,25 @@ ChartJS.register(
   Legend
 );
 
+interface CFEItemDetail {
+  nombre_item: string;
+  monto_item: number;
+}
+
 interface CFE {
   id: string;
   fecha_procesamiento: { value: string };
   monto_total: number | null;
+  emisor_nombre?: string;
+  detalles?: {
+    items: CFEItemDetail[];
+  };
+}
+
+interface Alert {
+  id: string;
+  leida: boolean;
+  // ... otros campos
 }
 
 // --- Componentes Reutilizables ---
@@ -70,6 +85,63 @@ const PurchasesChart = ({ data }: { data: any }) => {
   );
 };
 
+// Componente para el gráfico de Top Productos
+const TopProductsChart = ({ data }: { data: any }) => {
+  const options = {
+    indexAxis: 'y' as const,
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      title: {
+        display: true,
+        text: 'Top 5 Productos (Monto Total)',
+      },
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+      },
+    },
+  };
+
+  return (
+    <div className={styles.chartContainer}>
+      <Bar options={options} data={data} />
+    </div>
+  );
+};
+
+// Componente para la lista de Top Proveedores
+const TopProvidersList = ({
+  providers,
+}: {
+  providers: { name: string; total: number }[];
+}) => (
+  <div className={styles.listContainer}>
+    {providers.length > 0 ? (
+      <ol className={styles.orderedList}>
+        {providers.map((provider, index) => (
+          <li key={index} className={styles.listItem}>
+            <span className={styles.listItemName} title={provider.name}>
+              {provider.name}
+            </span>
+            <span className={styles.listItemValue}>
+              {`$ ${provider.total.toLocaleString('es-UY')}`}
+            </span>
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <p className={styles.emptyListText}>
+        No hay datos de proveedores para este mes.
+      </p>
+    )}
+  </div>
+);
+
 
 // --- Componente Principal de la Página ---
 
@@ -78,15 +150,32 @@ export default function HomePage() {
   const [stats, setStats] = useState({
     invoicesThisMonth: 0,
     xmlsThisMonth: 0,
-    alerts: 3, // Valor de ejemplo
+    alerts: 0, // Se calculará desde la API
   });
-  const [chartData, setChartData] = useState<any>({
+  const [purchasesChartData, setPurchasesChartData] = useState<any>({
     labels: [],
     datasets: [],
   });
+  const [topProductsData, setTopProductsData] = useState<any>({
+    labels: [],
+    datasets: [],
+  });
+  const [topProviders, setTopProviders] = useState<
+    { name: string; total: number }[]
+  >([]);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/cfes?limit=1000`)
+    // 1. Alertas que requieren atención
+    // TODO: Reemplazar con el fetch real a tu API de alertas
+    // fetch(`${process.env.NEXT_PUBLIC_API_URL}/alerts`)
+    //   .then(res => res.json())
+    //   .then(json => {
+    //     const unreadAlerts = json.data.items.filter((alert: Alert) => !alert.leida).length;
+    //     setStats(prev => ({ ...prev, alerts: unreadAlerts }));
+    //   });
+    setStats(prev => ({ ...prev, alerts: 5 })); // Valor de ejemplo mientras tanto
+
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/cfes?limit=2000`) // Aumentamos el límite para tener más datos
       .then(res => res.json())
       .then(json => {
         if (json.success) {
@@ -94,13 +183,19 @@ export default function HomePage() {
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-          // 1. & 2. Facturas y XMLs de este mes
           const invoicesThisMonth = cfes.filter(cfe => {
             const cfeDate = new Date(cfe.fecha_procesamiento.value);
             return cfeDate >= startOfMonth && cfeDate <= now;
           });
 
-          // 4. Datos para el gráfico de compras (últimos 6 meses)
+          // Tarjetas de Resumen
+          setStats(prev => ({
+            ...prev,
+            invoicesThisMonth: invoicesThisMonth.length,
+            xmlsThisMonth: invoicesThisMonth.length,
+          }));
+
+          // Gráfico de Compras (últimos 6 meses)
           const monthlyPurchases: { [key: string]: number } = {};
           const monthLabels: string[] = [];
           
@@ -123,19 +218,63 @@ export default function HomePage() {
             }
           });
 
-          setStats(prev => ({
-            ...prev,
-            invoicesThisMonth: invoicesThisMonth.length,
-            xmlsThisMonth: invoicesThisMonth.length, // Asumo que es el mismo contador
-          }));
-
-          setChartData({
+          setPurchasesChartData({
             labels: monthLabels,
             datasets: [
               {
                 label: 'Monto Total de Compras (UYU)',
                 data: Object.values(monthlyPurchases),
                 backgroundColor: 'rgba(53, 162, 235, 0.5)',
+              },
+            ],
+          });
+
+          // Top 10 Proveedores (este mes)
+          const providerTotals = new Map<string, number>();
+          invoicesThisMonth.forEach(cfe => {
+            if (cfe.emisor_nombre && cfe.monto_total) {
+              const currentTotal = providerTotals.get(cfe.emisor_nombre) || 0;
+              providerTotals.set(cfe.emisor_nombre, currentTotal + cfe.monto_total);
+            }
+          });
+          const sortedProviders = Array.from(providerTotals.entries())
+            .sort(([, totalA], [, totalB]) => totalB - totalA)
+            .slice(0, 10)
+            .map(([name, total]) => ({ name, total }));
+          setTopProviders(sortedProviders);
+
+          // Top 5 Productos (este mes)
+          const productTotals = new Map<string, number>();
+          invoicesThisMonth.forEach(cfe => {
+            cfe.detalles?.items.forEach(item => {
+              if (item.nombre_item && item.monto_item) {
+                const currentTotal = productTotals.get(item.nombre_item) || 0;
+                productTotals.set(item.nombre_item, currentTotal + item.monto_item);
+              }
+            });
+          });
+          const sortedProducts = Array.from(productTotals.entries())
+            .sort(([, totalA], [, totalB]) => totalB - totalA)
+            .slice(0, 5);
+
+          setTopProductsData({
+            labels: sortedProducts.map(([name]) => name),
+            datasets: [
+              {
+                label: 'Monto Total Comprado',
+                data: sortedProducts.map(([, total]) => total),
+                backgroundColor: [
+                  'rgba(54, 162, 235, 0.6)',
+                  'rgba(75, 192, 192, 0.6)',
+                  'rgba(255, 206, 86, 0.6)',
+                  'rgba(255, 159, 64, 0.6)',
+                  'rgba(153, 102, 255, 0.6)',
+                ],
+                borderColor: [
+                  'rgba(54, 162, 235, 1)',
+                  'rgba(75, 192, 192, 1)',
+                ],
+                borderWidth: 1,
               },
             ],
           });
@@ -172,8 +311,21 @@ export default function HomePage() {
         />
       </div>
 
-      <div className={styles.chartSection}>
-        <PurchasesChart data={chartData} />
+      <div className={styles.mainGrid}>
+        <div className={styles.mainChartSection}>
+          <h2 className={styles.sectionTitle}>Gráfico de Compras</h2>
+          <div className={styles.chartContainer}>
+            <PurchasesChart data={purchasesChartData} />
+          </div>
+        </div>
+        <div className={styles.sideSection}>
+          <h2 className={styles.sectionTitle}>Top 10 Proveedores (Este Mes)</h2>
+          <TopProvidersList providers={topProviders} />
+        </div>
+        <div className={styles.sideSection}>
+          <h2 className={styles.sectionTitle}>Top 5 Productos (Este Mes)</h2>
+          <TopProductsChart data={topProductsData} />
+        </div>
       </div>
     </div>
   );
