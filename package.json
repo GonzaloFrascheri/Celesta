@@ -1,4 +1,10 @@
 {
+  "name": "celesta-project",
+  "scripts": {
+    "dev": "next dev frontend",
+    "build": "next build frontend",
+    "start": "next start frontend"
+  },
   "dependencies": {
     "@google-cloud/functions-framework": "^4.0.0",
     "chart.js": "^4.5.0",
