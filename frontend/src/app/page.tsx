@@ -11,7 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import styles from './HomePage.module.css';
+import styles from './home/HomePage.module.css';
 
 // Registramos los componentes de Chart.js que vamos a utilizar
 ChartJS.register(
