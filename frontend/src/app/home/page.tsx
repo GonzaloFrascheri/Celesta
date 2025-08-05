@@ -325,11 +325,11 @@ export default function HomePage() {
           </div>
         </div>
         <div className={styles.sideSection}>
-          <h2 className={styles.sectionTitle}>Top 10 Proveedores (Este Mes)</h2>
+          <h2 className={styles.sectionTitle}>Top 10 Proveedores este mes</h2>
           <TopProvidersList providers={topProviders} />
         </div>
         <div className={styles.sideSection}>
-          <h2 className={styles.sectionTitle}>Top 5 Productos (Este Mes)</h2>
+          <h2 className={styles.sectionTitle}>Top 5 Productos este mes</h2>
           <TopProductsChart data={topProductsData} />
         </div>
       </div>
