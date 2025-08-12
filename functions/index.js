@@ -162,13 +162,26 @@ try {
             row.fecha_emision = idDoc.FchEmis ? new Date(idDoc.FchEmis).toISOString() : null;
             row.monto_total = totales.MntTotal ? Number(totales.MntTotal) : null;
             row.moneda = totales.TpoMoneda || null;
-            row.detalle = items.map(item => ({
-              nro_linea: item.NroLinDet ? Number(item.NroLinDet) : null,
-              nombre_item: item.NomItem || null,
-              cantidad: item.Cantidad ? Number(item.Cantidad) : null,
-              precio_unitario: item.PrecioUnitario ? Number(item.PrecioUnitario) : null,
-              monto_item: item.MontoItem ? Number(item.MontoItem) : null,
-            }));
+            
+            row.detalle = items.map(item => {
+              // El log muestra que las claves pueden venir con un prefijo como "efac:".
+              // Usamos notación de corchetes ['clave'] para acceder a ellas.
+              // También añadimos un plan B (|| item.Propiedad) por si alguna factura viniera sin el prefijo.
+              const nro_linea = item['efac:NroLinDet'] || item.NroLinDet;
+              const nombre_item = item['efac:NomItem'] || item.NomItem;
+              const cantidad = item['efac:Cantidad'] || item.Cantidad;
+              const precio_unitario = item['efac:PrecioUnitario'] || item.PrecioUnitario;
+              const monto_item = item['efac:MontoItem'] || item.MontoItem;
+
+              return {
+                  nro_linea: nro_linea ? Number(nro_linea) : null,
+                  nombre_item: nombre_item || null,
+                  cantidad: cantidad ? Number(cantidad) : null,
+                  precio_unitario: precio_unitario ? Number(precio_unitario) : null,
+                  monto_item: monto_item ? Number(monto_item) : null,
+              };
+            });
+
           } else if (doc.ACKCFE) {
             row.tipo_documento = 'ACK';
             const ack = doc.ACKCFE;
