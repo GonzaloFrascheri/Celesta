@@ -26,6 +26,16 @@
   overflow-y: auto; /* Permite scroll si hay muchos ítems */
 }
 
+.navSubtitle {
+  padding: 1.5rem 1rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #a0aec0; /* Un gris claro que contrasta bien */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  /* Evita que el usuario pueda seleccionar el texto del subtítulo */
+  user-select: none;
+}
 .navItemWithBadge {
   position: relative;
 }

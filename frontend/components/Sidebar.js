@@ -15,6 +15,7 @@ export default function Sidebar({ onLinkClick }) {
             Inicio
           </Link>
         </li>
+        <li className={styles.navSubtitle}>Data</li>
         <li>
           <Link
             href="/home/compras"
@@ -51,6 +52,7 @@ export default function Sidebar({ onLinkClick }) {
             Categorías
           </Link>
         </li>
+        <li className={styles.navSubtitle}>Herramientas</li>
         <li className={styles.navItemWithBadge}>
           <Link
             href="/home/alertas"
