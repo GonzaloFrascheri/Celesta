@@ -115,6 +115,12 @@ try {
       try {
         const rows = attachments.map(att => {
           const doc = xmlParser.parse(att.content);
+
+          // ---- INICIO DE CÓDIGO DE DEPURACIÓN ----
+          console.log('--- ESTRUCTURA DEL XML PARSEADO ---');
+          console.log(JSON.stringify(doc, null, 2));
+          // ---- FIN DE CÓDIGO DE DEPURACIÓN ----
+
           const row = {
             id: uuidv4(),
             nombre_archivo_original: att.filename,
