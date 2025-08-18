@@ -68,8 +68,15 @@ export default function ComprasPage() {
   const fetchCompras = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get("/compras?include=items");
-      setCompras(response.data.data || []);
+      const response = await apiClient.get("/compras?include=items,productos_maestros");
+      
+      // Asegurarse que los items estén presentes
+      const comprasConItems = response.data.data.map((compra: Compra) => ({
+        ...compra,
+        items: compra.items || []
+      }));
+      
+      setCompras(comprasConItems);
       setError(null);
     } catch (err) {
       console.error("Error al obtener las compras:", err);
@@ -188,15 +195,50 @@ export default function ComprasPage() {
       ));
     }
 
-    // Renderizado existente para compras manuales
-    return compra.items?.map((item, idx) => (
-      <tr key={`${compra.id}-${idx}`}>
-        <td>{item.descripcion_original}</td>
-        <td>{item.cantidad}</td>
-        <td>${item.precio_unitario?.toLocaleString('es-CL')}</td>
-        <td>${item.monto_item?.toLocaleString('es-CL')}</td>
+    // Mejora del renderizado para compras manuales
+    if (!compra.items || compra.items.length === 0) {
+      return (
+        <tr>
+          <td colSpan={5} className={styles.noItems}>
+            No hay items registrados para esta compra
+          </td>
+        </tr>
+      );
+    }
+
+    return compra.items.map((item, idx) => (
+      <tr key={`${compra.id}-${idx}`} className={styles.manualItem}>
+        <td>
+          <div className={styles.itemDescription}>
+            <span>{item.descripcion_original}</span>
+          </div>
+        </td>
+        <td className={styles.cantidad}>{item.cantidad}</td>
+        <td className={styles.precio}>
+          ${item.precio_unitario?.toLocaleString('es-CL')}
+        </td>
+        <td className={styles.subtotal}>
+          ${(item.cantidad * item.precio_unitario).toLocaleString('es-CL')}
+        </td>
         <td className={styles.productoMaestro}>
-          {item.producto_maestro_nombre || 'Sin categorizar'}
+          {item.producto_maestro_nombre || (
+            <span className={styles.pendiente}>
+              Sin categorizar
+              <button 
+                className={styles.categorizarBtn}
+                onClick={() => handleCategorizar(compra.id, idx, {
+                  NomItem: item.descripcion_original,
+                  DscItem: '',
+                  NroLinDet: String(idx + 1),
+                  Cantidad: String(item.cantidad),
+                  PrecioUnitario: String(item.precio_unitario),
+                  MontoItem: String(item.monto_item)
+                })}
+              >
+                Categorizar
+              </button>
+            </span>
+          )}
         </td>
       </tr>
     ));
@@ -277,7 +319,7 @@ export default function ComprasPage() {
                 </tr>
                 {expandedRows.has(c.id) && (
                   <tr className={styles.itemsRow}>
-                    <td colSpan={6}>
+                    <td colSpan={7}> {/* Cambiado de 6 a 7 para incluir la columna de expansión */}
                       <table className={styles.itemsTable}>
                         <thead>
                           <tr>

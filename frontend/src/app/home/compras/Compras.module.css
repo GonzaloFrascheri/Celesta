@@ -323,15 +323,39 @@
   gap: 8px;
 }
 
+.manualItem {
+  background-color: #fff;
+}
+
+.manualItem:hover {
+  background-color: #f8f9fa;
+}
+
+.itemDescription {
+  display: flex;
+  flex-direction: column;
+}
+
+.noItems {
+  text-align: center;
+  color: #666;
+  padding: 1rem;
+  font-style: italic;
+}
+
+.cantidad, .precio, .subtotal {
+  text-align: right;
+}
+
 .pendiente {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: #856404;
   background-color: #fff3cd;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.9em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .categorizarBtn {
