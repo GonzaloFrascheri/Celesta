@@ -390,23 +390,24 @@ app.post('/api/inbound', async (req, res) => {
       const parsed = xmlParser.parse(xmlContent);
       const envioCFE = parsed['cfe:EnvioCFE_entreEmpresas'];
       const caratula = envioCFE['cfe:Caratula'];
-      const cfe = envioCFE['cfe:CFE_Adenda'].CFE.eFact;
+      const cfeAdenda = envioCFE['cfe:CFE_Adenda'];
+      const cfe = cfeAdenda?.CFE?.eFact;
 
-      // Validar que los campos existen antes de asignarlos
+      // Adaptar el mapeo según la estructura del XML
       const cfeBigQuery = {
         id: uuidv4(),
         nombre_archivo_original: req.headers['x-filename'] || 'cfe.xml',
         fecha_procesamiento: new Date().toISOString(),
         
-        emisor_rut: cfe.Emisor?.RUCEmisor || null,
-        emisor_nombre: cfe.Emisor?.RznSoc || null,
-        receptor_rut: cfe.Receptor?.DocRecep || null,
-        tipo_cfe: cfe.IdDoc?.TipoCFE ? parseInt(cfe.IdDoc.TipoCFE) : null,
-        serie_cfe: cfe.IdDoc?.Serie || null,
-        numero_cfe: cfe.IdDoc?.Nro ? parseInt(cfe.IdDoc.Nro) : null,
-        fecha_emision: cfe.IdDoc?.FchEmis ? new Date(cfe.IdDoc.FchEmis).toISOString() : null,
-        monto_total: cfe.Totales?.MntTotal ? parseFloat(cfe.Totales.MntTotal) : null,
-        moneda: cfe.Totales?.TpoMoneda || null,
+        emisor_rut: cfe?.Emisor?.RUCEmisor || null,
+        emisor_nombre: cfe?.Emisor?.RznSoc || null,
+        receptor_rut: cfe?.Receptor?.DocRecep || null,
+        tipo_cfe: cfe?.IdDoc?.TipoCFE ? parseInt(cfe.IdDoc.TipoCFE) : null,
+        serie_cfe: cfe?.IdDoc?.Serie || null,
+        numero_cfe: cfe?.IdDoc?.Nro ? parseInt(cfe.IdDoc.Nro) : null,
+        fecha_emision: cfe?.IdDoc?.FchEmis ? new Date(cfe.IdDoc.FchEmis).toISOString() : null,
+        monto_total: cfe?.Totales?.MntTotal ? parseFloat(cfe.Totales.MntTotal) : null,
+        moneda: cfe?.Totales?.TpoMoneda || null,
         
         rut_receptor_caratula: caratula?.['cfe:RutReceptor'] || null,
         ruc_emisor_caratula: caratula?.['cfe:RUCEmisor'] || null,
@@ -417,15 +418,15 @@ app.post('/api/inbound', async (req, res) => {
         
         proveedor: {
           id: uuidv4(),
-          rut: cfe.Emisor?.RUCEmisor || null,
-          razon_social: cfe.Emisor?.RznSoc || null,
-          giro: cfe.Emisor?.GiroEmis || null
+          rut: cfe?.Emisor?.RUCEmisor || null,
+          razon_social: cfe?.Emisor?.RznSoc || null,
+          giro: cfe?.Emisor?.GiroEmis || null
         },
         
         tipo_documento: 'CFE',
         estado_documento: 'PENDIENTE',
         
-        detalle: cfe.Detalle?.Item.map(item => ({
+        detalle: cfe?.Detalle?.Item.map(item => ({
           nro_linea: item?.NroLinDet ? parseInt(item.NroLinDet) : null,
           nombre_item: item?.NomItem || null,
           cantidad: item?.Cantidad ? parseFloat(item.Cantidad) : null,
@@ -445,6 +446,7 @@ app.post('/api/inbound', async (req, res) => {
         .table('cfes')
         .insert([cfeBigQuery]);
 
+      console.log('✅ Insertadas 1 filas.');
       sendSuccess(res, {
         message: 'CFE procesado correctamente',
         cfe_id: cfeBigQuery.id
@@ -666,7 +668,7 @@ app.get('/api/precios-historico/:productoId', async (req, res) => {
 });
 
 // GET /api/alertas
-// Lista las alertas creadas en BigQuery
+// Lista las alertas creadas in BigQuery
 app.get('/api/alertas', async (req, res) => {
   const leidaParam = req.query.leida === 'true';
   // 🔥 Loguea DATASET_ID y la query
