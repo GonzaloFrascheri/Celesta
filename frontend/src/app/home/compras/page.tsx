@@ -8,6 +8,29 @@ import apiClient from '../../../../lib/api';
 import styles from './Compras.module.css';
 import { FaPlus, FaCog } from 'react-icons/fa';
 
+interface CFEItem {
+  NroLinDet: string;
+  NomItem: string;
+  DscItem: string;
+  Cantidad: string;
+  PrecioUnitario: string;
+  MontoItem: string;
+  producto_maestro_id?: string;
+  producto_maestro_nombre?: string;
+}
+
+interface CFE {
+  id: string;
+  Serie: string;
+  Nro: string;
+  FchEmis: string;
+  RUCEmisor: string;
+  RznSocEmisor: string;
+  estado_ml: 'PENDIENTE' | 'PROCESADO';
+  items: CFEItem[];
+  monto_total: number;
+}
+
 interface CompraItem {
   descripcion_original: string;
   cantidad: number;
@@ -25,6 +48,8 @@ interface Compra {
   created_at?: string;
   estado_ml?: string;
   items?: CompraItem[];
+  tipo: 'CFE' | 'MANUAL';
+  cfe?: CFE;
 }
 
 export default function ComprasPage() {
@@ -78,6 +103,43 @@ export default function ComprasPage() {
     }
   };
 
+  const handleCategorizar = async (compraId: string, itemIndex: number, item: CFEItem) => {
+    try {
+      const response = await apiClient.post('/sugerir-producto', {
+        descripcion: item.NomItem,
+        descripcion_detallada: item.DscItem
+      });
+
+      if (response.data.success) {
+        // Actualizar el estado local
+        const nuevasCompras = compras.map(c => {
+          if (c.id === compraId && c.tipo === 'CFE' && c.cfe) {
+            const nuevosItems = [...c.cfe.items];
+            nuevosItems[itemIndex] = {
+              ...nuevosItems[itemIndex],
+              producto_maestro_id: response.data.producto_id,
+              producto_maestro_nombre: response.data.producto_nombre
+            };
+            return {
+              ...c,
+              cfe: {
+                ...c.cfe,
+                items: nuevosItems
+              }
+            };
+          }
+          return c;
+        });
+
+        setCompras(nuevasCompras);
+        alert('Producto categorizado exitosamente');
+      }
+    } catch (error) {
+      console.error('Error al categorizar:', error);
+      alert('Error al categorizar el producto');
+    }
+  };
+
   // — FILTRADO —
   const term = search.trim().toLowerCase();
   const filtered = compras.filter(c =>
@@ -97,6 +159,47 @@ export default function ComprasPage() {
       newExpanded.add(id);
     }
     setExpandedRows(newExpanded);
+  };
+
+  const renderItems = (compra: Compra) => {
+    if (compra.tipo === 'CFE') {
+      return compra.cfe?.items.map((item, idx) => (
+        <tr key={`${compra.id}-${idx}`} className={styles.cfeItem}>
+          <td>{item.NomItem}</td>
+          <td>{item.Cantidad}</td>
+          <td>${parseFloat(item.PrecioUnitario).toLocaleString('es-CL')}</td>
+          <td>${parseFloat(item.MontoItem).toLocaleString('es-CL')}</td>
+          <td className={styles.productoMaestro}>
+            <div className={styles.categorizacionContainer}>
+              {item.producto_maestro_nombre || (
+                <span className={styles.pendiente}>
+                  Pendiente de categorización
+                  <button 
+                    className={styles.categorizarBtn}
+                    onClick={() => handleCategorizar(compra.id, idx, item)}
+                  >
+                    Categorizar
+                  </button>
+                </span>
+              )}
+            </div>
+          </td>
+        </tr>
+      ));
+    }
+
+    // Renderizado existente para compras manuales
+    return compra.items?.map((item, idx) => (
+      <tr key={`${compra.id}-${idx}`}>
+        <td>{item.descripcion_original}</td>
+        <td>{item.cantidad}</td>
+        <td>${item.precio_unitario?.toLocaleString('es-CL')}</td>
+        <td>${item.monto_item?.toLocaleString('es-CL')}</td>
+        <td className={styles.productoMaestro}>
+          {item.producto_maestro_nombre || 'Sin categorizar'}
+        </td>
+      </tr>
+    ));
   };
 
   if (loading) return <div className={styles.loader}>Cargando compras…</div>;
@@ -138,44 +241,41 @@ export default function ComprasPage() {
       <table className={styles.table}>
         <thead>
           <tr>
-            <th></th> {/* Para el botón expandir */}
+            <th></th>
+            <th>Tipo</th>
             <th>Folio</th>
             <th>Proveedor</th>
             <th>Monto Total</th>
-            <th>Fecha de Creación</th>
-            <th>Estado ML</th>
+            <th>Fecha</th>
+            <th>Estado</th>
           </tr>
         </thead>
         <tbody>
           {paginated.length > 0 ? (
             paginated.map(c => (
               <>
-                <tr key={c.id} className={expandedRows.has(c.id) ? styles.expanded : ''}>
+                <tr key={c.id} className={`${styles.row} ${c.tipo === 'CFE' ? styles.cfeFila : ''}`}>
                   <td>
-                    <button 
-                      onClick={() => toggleRow(c.id)}
-                      className={styles.expandButton}
-                    >
+                    <button onClick={() => toggleRow(c.id)} className={styles.expandButton}>
                       {expandedRows.has(c.id) ? '▼' : '▶'}
                     </button>
                   </td>
-                  <td>{c.folio || 'N/A'}</td>
-                  <td>{c.proveedor_nombre || 'No Asignado'}</td>
-                  <td>${c.monto_total?.toLocaleString('es-CL') ?? 'N/A'}</td>
                   <td>
-                    {c.created_at
-                      ? typeof c.created_at === 'string'
-                        ? c.created_at
-                        : new Date(c.created_at).toLocaleString()
-                      : 'N/A'}
+                    <span className={styles.tipo}>
+                      {c.tipo === 'CFE' ? '📄 CFE' : '✍️ Manual'}
+                    </span>
                   </td>
+                  <td>{c.tipo === 'CFE' ? `${c.cfe?.Serie}-${c.cfe?.Nro}` : c.folio}</td>
+                  <td>{c.tipo === 'CFE' ? c.cfe?.RznSocEmisor : c.proveedor_nombre}</td>
+                  <td>${c.monto_total?.toLocaleString('es-CL')}</td>
+                  <td>{new Date(c.tipo === 'CFE' ? c.cfe?.FchEmis ?? '' : c.created_at ?? '').toLocaleDateString()}</td>
                   <td>
                     <span className={`${styles.status} ${styles[c.estado_ml?.toLowerCase() || 'pendiente']}`}>
                       {c.estado_ml || 'PENDIENTE'}
                     </span>
                   </td>
                 </tr>
-                {expandedRows.has(c.id) && c.items && (
+                {expandedRows.has(c.id) && (
                   <tr className={styles.itemsRow}>
                     <td colSpan={6}>
                       <table className={styles.itemsTable}>
@@ -189,17 +289,7 @@ export default function ComprasPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {c.items.map((item, idx) => (
-                            <tr key={`${c.id}-${idx}`}>
-                              <td>{item.descripcion_original}</td>
-                              <td>{item.cantidad}</td>
-                              <td>${item.precio_unitario?.toLocaleString('es-CL')}</td>
-                              <td>${item.monto_item?.toLocaleString('es-CL')}</td>
-                              <td className={styles.productoMaestro}>
-                                {item.producto_maestro_nombre || 'Sin categorizar'}
-                              </td>
-                            </tr>
-                          ))}
+                          {renderItems(c)}
                         </tbody>
                       </table>
                     </td>

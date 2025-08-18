@@ -312,3 +312,38 @@
   color: #999;
   font-style: italic;
 }
+
+.cfeItem {
+  background-color: #f8f9fa;
+}
+
+.categorizacionContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pendiente {
+  color: #856404;
+  background-color: #fff3cd;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.categorizarBtn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+
+.categorizarBtn:hover {
+  background-color: #0056b3;
+}
