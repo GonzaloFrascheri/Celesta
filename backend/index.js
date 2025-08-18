@@ -388,37 +388,101 @@ app.post('/api/inbound', async (req, res) => {
   busboy.on('finish', async () => {
     try {
       const parsed = xmlParser.parse(xmlContent);
-      const cfe = parsed['cfe:EnvioCFE_entreEmpresas']['cfe:CFE_Adenda'].CFE.eFact;
+      const envioCFE = parsed['cfe:EnvioCFE_entreEmpresas'];
+      const caratula = envioCFE['cfe:Caratula'];
+      const cfe = envioCFE['cfe:CFE_Adenda'].CFE.eFact;
       
-      // Crear la estructura de compra
-      const nuevaCompra = {
+      // VALIDAR CAMPOS REQUERIDOS DEL CFE
+      const validateCFE = (cfe) => {
+        const required = [
+          'IdDoc.TipoCFE',
+          'IdDoc.Serie',
+          'IdDoc.Nro',
+          'Emisor.RUCEmisor',
+          'Receptor.DocRecep',
+          'Totales.MntTotal'
+        ];
+    
+        for (const field of required) {
+          const value = field.split('.').reduce((obj, key) => obj?.[key], cfe);
+          if (!value) {
+            throw new Error(`Campo requerido faltante: ${field}`);
+          }
+        }
+      };
+    
+      // Usar antes de procesar el CFE
+      validateCFE(cfe);
+      
+      // Estructurar los datos según el esquema de BigQuery
+      const cfeBigQuery = {
         id: uuidv4(),
-        tipo: 'CFE',
-        created_at: new Date().toISOString(),
-        estado_ml: 'PENDIENTE',
-        folio: `${cfe.IdDoc.Serie}-${cfe.IdDoc.Nro}`,
-        proveedor_nombre: cfe.Emisor.RznSoc,
+        nombre_archivo_original: req.headers['x-filename'] || 'cfe.xml',
+        fecha_procesamiento: new Date().toISOString(),
+        
+        // Datos del CFE
+        emisor_rut: cfe.Emisor.RUCEmisor,
+        emisor_nombre: cfe.Emisor.RznSoc,
+        receptor_rut: cfe.Receptor.DocRecep,
+        tipo_cfe: parseInt(cfe.IdDoc.TipoCFE),
+        serie_cfe: cfe.IdDoc.Serie,
+        numero_cfe: parseInt(cfe.IdDoc.Nro),
+        fecha_emision: new Date(cfe.IdDoc.FchEmis).toISOString(),
         monto_total: parseFloat(cfe.Totales.MntTotal),
-        items: cfe.Detalle.Item.map(item => ({
-          descripcion_original: item.NomItem,
+        moneda: cfe.Totales.TpoMoneda,
+        
+        // Datos de la carátula
+        rut_receptor_caratula: caratula['cfe:RutReceptor'],
+        ruc_emisor_caratula: caratula['cfe:RUCEmisor'],
+        cantidad_cfe: parseInt(caratula['cfe:CantCFE']),
+        fecha_caratula: new Date(caratula['cfe:Fecha']).toISOString(),
+        
+        // Contenido XML completo para referencia
+        contenido_xml: xmlContent,
+        
+        // Datos del proveedor como RECORD
+        proveedor: {
+          id: uuidv4(),
+          rut: cfe.Emisor.RUCEmisor,
+          razon_social: cfe.Emisor.RznSoc,
+          giro: cfe.Emisor.GiroEmis
+        },
+        
+        // Estado inicial del documento
+        tipo_documento: 'CFE',
+        estado_documento: 'PENDIENTE',
+        
+        // Items del CFE como array de RECORD
+        detalle: cfe.Detalle.Item.map(item => ({
+          nro_linea: parseInt(item.NroLinDet),
+          nombre_item: item.NomItem,
           cantidad: parseFloat(item.Cantidad),
           precio_unitario: parseFloat(item.PrecioUnitario),
           monto_item: parseFloat(item.MontoItem),
-          producto_maestro_id: null,
-          producto_maestro_nombre: null
+          // Campos para la categorización
+          producto_maestro: {
+            id: null,
+            nombre: null,
+            categoria_nombre: null
+          }
         }))
       };
 
-      // Guardar en BigQuery
+      // Insertar en BigQuery
       await bigquery
         .dataset(DATASET_ID)
-        .table('compras')
-        .insert([nuevaCompra]);
+        .table('cfes')
+        .insert([cfeBigQuery]);
 
-      sendSuccess(res, { message: 'CFE procesado y compra creada correctamente' });
+      // Notificar éxito
+      sendSuccess(res, {
+        message: 'CFE procesado correctamente',
+        cfe_id: cfeBigQuery.id
+      });
+
     } catch (error) {
       console.error('Error procesando CFE:', error);
-      sendError(res, 'Error procesando CFE');
+      sendError(res, `Error procesando CFE: ${error.message}`);
     }
   });
 
