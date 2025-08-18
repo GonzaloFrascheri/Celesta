@@ -391,81 +391,52 @@ app.post('/api/inbound', async (req, res) => {
       const envioCFE = parsed['cfe:EnvioCFE_entreEmpresas'];
       const caratula = envioCFE['cfe:Caratula'];
       const cfe = envioCFE['cfe:CFE_Adenda'].CFE.eFact;
-      
-      // VALIDAR CAMPOS REQUERIDOS DEL CFE
-      const validateCFE = (cfe) => {
-        const required = [
-          'IdDoc.TipoCFE',
-          'IdDoc.Serie',
-          'IdDoc.Nro',
-          'Emisor.RUCEmisor',
-          'Receptor.DocRecep',
-          'Totales.MntTotal'
-        ];
-    
-        for (const field of required) {
-          const value = field.split('.').reduce((obj, key) => obj?.[key], cfe);
-          if (!value) {
-            throw new Error(`Campo requerido faltante: ${field}`);
-          }
-        }
-      };
-    
-      // Usar antes de procesar el CFE
-      validateCFE(cfe);
-      
-      // Estructurar los datos según el esquema de BigQuery
+
+      // Validar que los campos existen antes de asignarlos
       const cfeBigQuery = {
         id: uuidv4(),
         nombre_archivo_original: req.headers['x-filename'] || 'cfe.xml',
         fecha_procesamiento: new Date().toISOString(),
         
-        // Datos del CFE
-        emisor_rut: cfe.Emisor.RUCEmisor,
-        emisor_nombre: cfe.Emisor.RznSoc,
-        receptor_rut: cfe.Receptor.DocRecep,
-        tipo_cfe: parseInt(cfe.IdDoc.TipoCFE),
-        serie_cfe: cfe.IdDoc.Serie,
-        numero_cfe: parseInt(cfe.IdDoc.Nro),
-        fecha_emision: new Date(cfe.IdDoc.FchEmis).toISOString(),
-        monto_total: parseFloat(cfe.Totales.MntTotal),
-        moneda: cfe.Totales.TpoMoneda,
+        emisor_rut: cfe.Emisor?.RUCEmisor || null,
+        emisor_nombre: cfe.Emisor?.RznSoc || null,
+        receptor_rut: cfe.Receptor?.DocRecep || null,
+        tipo_cfe: cfe.IdDoc?.TipoCFE ? parseInt(cfe.IdDoc.TipoCFE) : null,
+        serie_cfe: cfe.IdDoc?.Serie || null,
+        numero_cfe: cfe.IdDoc?.Nro ? parseInt(cfe.IdDoc.Nro) : null,
+        fecha_emision: cfe.IdDoc?.FchEmis ? new Date(cfe.IdDoc.FchEmis).toISOString() : null,
+        monto_total: cfe.Totales?.MntTotal ? parseFloat(cfe.Totales.MntTotal) : null,
+        moneda: cfe.Totales?.TpoMoneda || null,
         
-        // Datos de la carátula
-        rut_receptor_caratula: caratula['cfe:RutReceptor'],
-        ruc_emisor_caratula: caratula['cfe:RUCEmisor'],
-        cantidad_cfe: parseInt(caratula['cfe:CantCFE']),
-        fecha_caratula: new Date(caratula['cfe:Fecha']).toISOString(),
+        rut_receptor_caratula: caratula?.['cfe:RutReceptor'] || null,
+        ruc_emisor_caratula: caratula?.['cfe:RUCEmisor'] || null,
+        cantidad_cfe: caratula?.['cfe:CantCFE'] ? parseInt(caratula['cfe:CantCFE']) : null,
+        fecha_caratula: caratula?.['cfe:Fecha'] ? new Date(caratula['cfe:Fecha']).toISOString() : null,
         
-        // Contenido XML completo para referencia
         contenido_xml: xmlContent,
         
-        // Datos del proveedor como RECORD
         proveedor: {
           id: uuidv4(),
-          rut: cfe.Emisor.RUCEmisor,
-          razon_social: cfe.Emisor.RznSoc,
-          giro: cfe.Emisor.GiroEmis
+          rut: cfe.Emisor?.RUCEmisor || null,
+          razon_social: cfe.Emisor?.RznSoc || null,
+          giro: cfe.Emisor?.GiroEmis || null
         },
         
-        // Estado inicial del documento
         tipo_documento: 'CFE',
         estado_documento: 'PENDIENTE',
         
-        // Items del CFE como array de RECORD
-        detalle: cfe.Detalle.Item.map(item => ({
-          nro_linea: parseInt(item.NroLinDet),
-          nombre_item: item.NomItem,
-          cantidad: parseFloat(item.Cantidad),
-          precio_unitario: parseFloat(item.PrecioUnitario),
-          monto_item: parseFloat(item.MontoItem),
-          // Campos para la categorización
+        detalle: cfe.Detalle?.Item.map(item => ({
+          nro_linea: item?.NroLinDet ? parseInt(item.NroLinDet) : null,
+          nombre_item: item?.NomItem || null,
+          cantidad: item?.Cantidad ? parseFloat(item.Cantidad) : null,
+          precio_unitario: item?.PrecioUnitario ? parseFloat(item.PrecioUnitario) : null,
+          monto_item: item?.MontoItem ? parseFloat(item.MontoItem) : null,
           producto_maestro: {
             id: null,
             nombre: null,
             categoria_nombre: null
           }
-        }))
+        })) || []
       };
 
       // Insertar en BigQuery
@@ -474,7 +445,6 @@ app.post('/api/inbound', async (req, res) => {
         .table('cfes')
         .insert([cfeBigQuery]);
 
-      // Notificar éxito
       sendSuccess(res, {
         message: 'CFE procesado correctamente',
         cfe_id: cfeBigQuery.id
