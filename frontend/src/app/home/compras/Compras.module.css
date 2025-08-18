@@ -266,3 +266,49 @@
   opacity: 0.5;
   cursor: default;
 }
+
+.expandButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 10px;
+  font-size: 1.1em;
+  color: #666;
+}
+
+.expanded {
+  background-color: #f8f9fa;
+}
+
+.itemsRow {
+  background-color: #f8f9fa;
+}
+
+.itemsTable {
+  width: 100%;
+  margin: 10px 0;
+  border-collapse: collapse;
+}
+
+.itemsTable th,
+.itemsTable td {
+  padding: 8px;
+  border: 1px solid #ddd;
+  font-size: 0.9em;
+}
+
+.itemsTable th {
+  background-color: #f1f1f1;
+  font-weight: 600;
+}
+
+.productoMaestro {
+  color: #0066cc;
+  font-weight: 500;
+}
+
+.productoMaestro:empty::before {
+  content: 'Sin categorizar';
+  color: #999;
+  font-style: italic;
+}

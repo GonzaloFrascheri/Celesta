@@ -8,6 +8,15 @@ import apiClient from '../../../../lib/api';
 import styles from './Compras.module.css';
 import { FaPlus, FaCog } from 'react-icons/fa';
 
+interface CompraItem {
+  descripcion_original: string;
+  cantidad: number;
+  precio_unitario: number;
+  monto_item: number;
+  producto_maestro_id?: string;
+  producto_maestro_nombre?: string;
+}
+
 interface Compra {
   id: string;
   folio?: string;
@@ -15,6 +24,7 @@ interface Compra {
   monto_total?: number;
   created_at?: string;
   estado_ml?: string;
+  items?: CompraItem[];
 }
 
 export default function ComprasPage() {
@@ -23,6 +33,7 @@ export default function ComprasPage() {
   // <-- Aquí cambiamos el tipo de null a string|null
   const [error, setError]           = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   // estados de búsqueda/paginado…
   const [search, setSearch] = useState("");
   const [page,   setPage]   = useState(1);
@@ -32,12 +43,11 @@ export default function ComprasPage() {
   const fetchCompras = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get("/compras");
+      const response = await apiClient.get("/compras?include=items");
       setCompras(response.data.data || []);
       setError(null);
     } catch (err) {
       console.error("Error al obtener las compras:", err);
-      // Ahora esto ya no da error porque error puede ser string
       setError("No se pudieron cargar las compras. Inténtalo de nuevo más tarde.");
     } finally {
       setLoading(false);
@@ -79,6 +89,16 @@ export default function ComprasPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paginated  = filtered.slice((page - 1) * perPage, page * perPage);
 
+  const toggleRow = (id: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedRows(newExpanded);
+  };
+
   if (loading) return <div className={styles.loader}>Cargando compras…</div>;
   if (error)   return <div className={styles.error}>{error}</div>;
 
@@ -118,6 +138,7 @@ export default function ComprasPage() {
       <table className={styles.table}>
         <thead>
           <tr>
+            <th></th> {/* Para el botón expandir */}
             <th>Folio</th>
             <th>Proveedor</th>
             <th>Monto Total</th>
@@ -126,38 +147,73 @@ export default function ComprasPage() {
           </tr>
         </thead>
         <tbody>
-          {paginated.length > 0
-            ? paginated.map(c => (
-              <tr key={c.id}>
-                <td>{c.folio || 'N/A'}</td>
-                <td>{c.proveedor_nombre || 'No Asignado'}</td>
-                <td>${c.monto_total?.toLocaleString('es-CL') ?? 'N/A'}</td>
-                {/* — CORRECCIÓN: ahora usamos la propiedad directa created_at — */}
-                <td>
-                  {c.created_at
-                    ? typeof c.created_at === 'string'
-                      ? c.created_at                // si ya viene formateada
-                      : new Date(c.created_at).toLocaleString()
-                    : 'N/A'}
-                </td>
-                <td>
-                  <span
-                    className={`${styles.status} ${
-                      styles[c.estado_ml?.toLowerCase() || 'pendiente']
-                    }`}
-                  >
-                    {c.estado_ml || 'PENDIENTE'}
-                  </span>
-                </td>
-              </tr>
+          {paginated.length > 0 ? (
+            paginated.map(c => (
+              <>
+                <tr key={c.id} className={expandedRows.has(c.id) ? styles.expanded : ''}>
+                  <td>
+                    <button 
+                      onClick={() => toggleRow(c.id)}
+                      className={styles.expandButton}
+                    >
+                      {expandedRows.has(c.id) ? '▼' : '▶'}
+                    </button>
+                  </td>
+                  <td>{c.folio || 'N/A'}</td>
+                  <td>{c.proveedor_nombre || 'No Asignado'}</td>
+                  <td>${c.monto_total?.toLocaleString('es-CL') ?? 'N/A'}</td>
+                  <td>
+                    {c.created_at
+                      ? typeof c.created_at === 'string'
+                        ? c.created_at
+                        : new Date(c.created_at).toLocaleString()
+                      : 'N/A'}
+                  </td>
+                  <td>
+                    <span className={`${styles.status} ${styles[c.estado_ml?.toLowerCase() || 'pendiente']}`}>
+                      {c.estado_ml || 'PENDIENTE'}
+                    </span>
+                  </td>
+                </tr>
+                {expandedRows.has(c.id) && c.items && (
+                  <tr className={styles.itemsRow}>
+                    <td colSpan={6}>
+                      <table className={styles.itemsTable}>
+                        <thead>
+                          <tr>
+                            <th>Descripción</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unit.</th>
+                            <th>Subtotal</th>
+                            <th>Producto Maestro</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {c.items.map((item, idx) => (
+                            <tr key={`${c.id}-${idx}`}>
+                              <td>{item.descripcion_original}</td>
+                              <td>{item.cantidad}</td>
+                              <td>${item.precio_unitario?.toLocaleString('es-CL')}</td>
+                              <td>${item.monto_item?.toLocaleString('es-CL')}</td>
+                              <td className={styles.productoMaestro}>
+                                {item.producto_maestro_nombre || 'Sin categorizar'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))
-            : (
-              <tr>
-                <td colSpan={5} style={{ textAlign: 'center' }}>
-                  No hay compras para mostrar.
-                </td>
-              </tr>
-            )}
+          ) : (
+            <tr>
+              <td colSpan={6} style={{ textAlign: 'center' }}>
+                No hay compras para mostrar.
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
 
