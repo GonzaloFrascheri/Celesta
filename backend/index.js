@@ -375,136 +375,52 @@ app.post('/api/procesar-compras-pendientes', async (req, res) => {
 });
 
 /** CFE Inbound Processing */
-app.post('/api/inbound', (req, res) => {
-  console.log('📥 LLEGÓ CFE', req.method, 'a', req.path);
-  console.log('🔥 Content-Type:', req.headers['content-type'] || '');
-
-  if (req.method !== 'POST') {
-    return res.status(405).send('Método no permitido');
-  }
-
-  const ct = req.headers['content-type'] || '';
-  if (!ct.startsWith('multipart/form-data')) {
-    return res
-      .status(400)
-      .send(`Se esperaba multipart/form-data, llegó: ${ct}`);
-  }
-
+app.post('/api/inbound', async (req, res) => {
   const busboy = Busboy({ headers: req.headers });
-  const attachments = [];
+  let xmlContent = '';
 
-  busboy.on('file', (fieldname, fileStream, info) => {
-    const { filename } = info;
-    if (!filename.toLowerCase().endsWith('.xml')) {
-      console.log(`Archivo omitido (no es XML): ${filename}`);
-      return fileStream.resume();
-    }
-    let buffer = '';
-    fileStream.on('data', chunk => buffer += chunk.toString());
-    fileStream.on('end', () => {
-      attachments.push({ filename, content: buffer });
+  busboy.on('file', (fieldname, file) => {
+    file.on('data', data => {
+      xmlContent += data.toString();
     });
-  });
-
-  busboy.on('error', err => {
-    console.error('Busboy error:', err);
-    sendError(res, 'Error leyendo adjuntos');
   });
 
   busboy.on('finish', async () => {
-  if (attachments.length === 0) {
-    console.warn('⚠️ Sin adjuntos XML.');
-    return sendError(res, 'Sin adjuntos XML', 400);
-  }
-
-  try {
-    const rows = attachments.map(att => {
-      const doc = xmlParser.parse(att.content);
-      // detectamos el nodo raíz:
-      const root = Object.keys(doc)[0];
-      const body = doc[root] || {};
-
-      // Carátula común a todos:
-      const car = body.Caratula || {};
-
-      // Totales (solo válido en el envío normal)
-      const tot = body.Totales || {};
-
-       // 1) Rut / RUC emisor y receptor
-      const emisorRut    = car.RUTEmisor    ?? car.RUCEmisor    ?? null;
-      const receptorRut  = car.RUTReceptor   ?? car.RUCReceptor  ?? null;
-      const emisorNombre = car.RznSoc       ?? car.RazonSocial ?? null;
-
-      const cantidadRaw =
-        car.CantenSobre         // Envío normal: <CantenSobre>
-        ?? car.CantidadCFE      // ACKSobre: <CantidadCFE>
-        ?? car.CantCFEAceptados // ACKCFE: <CantCFEAceptados>
-        ?? car.CantCFCAceptados // posible variante
-        ?? null;
-
-      // Buscamos todos los posibles tags de fecha de carátula/timbre:
-      const fechaRaw =
-        car.FchEmis        // Envío normal: <FchEmis>
-        ?? car.FecHRecibido// ACKCFE: <FecHRecibido>
-        ?? car.Tmst        // ACKCFE/ACKSobre: <Tmst>
-        ?? null;
-        
-      // IdDoc en eFact o ACKCFE_Det
-      let idoc = {};
-      if (body.CFE_Adenda) {
-        idoc = body.CFE_Adenda.CFE.eFact.Encabezado.IdDoc || {};
-      } else if (body.ACKCFE_Det) {
-        idoc = body.ACKCFE_Det;
-      } else if (body.Detalle) {
-        // ACKSobre no trae id, dejamos vacío
-        idoc = {};
-      }
-
-      return {
-        id:                      uuidv4(),
-        nombre_archivo_original: att.filename,
-        fecha_procesamiento:     new Date().toISOString(),
-
-        // — Carátula —
-        emisor_rut:               emisorRut,
-        emisor_nombre:            emisorNombre,
-        receptor_rut:             receptorRut,
-        rut_receptor_caratula:    receptorRut,
-        ruc_emisor_caratula:      emisorRut,
-        cantidad_cfe:             cantidadRaw != null ? Number(cantidadRaw) : null,
-        fecha_caratula:           fechaRaw   ? new Date(fechaRaw).toISOString() : null,
-
-        // — Totales / IdDoc —
-        tipo_cfe:      idoc.TipoCFE   ? Number(idoc.TipoCFE)   : null,
-        serie_cfe:     idoc.Serie     || null,
-        numero_cfe:    idoc.Nro       ? Number(idoc.Nro)
-                      : idoc.NroCFE    ? Number(idoc.NroCFE)
-                      : null,
-        fecha_emision: idoc.FchEmis             // e-Fact normal
-                      || idoc.FechaCFE           // ACKCFE
-                      || null,
-
-        monto_total:   tot.MntTotal    // e-Fact normal
-                      ?? null,
-        moneda:        tot.TpoMoneda   // e-Fact normal
-                      ?? null,
-
-        contenido_xml: att.content
+    try {
+      const parsed = xmlParser.parse(xmlContent);
+      const cfe = parsed['cfe:EnvioCFE_entreEmpresas']['cfe:CFE_Adenda'].CFE.eFact;
+      
+      // Crear la estructura de compra
+      const nuevaCompra = {
+        id: uuidv4(),
+        tipo: 'CFE',
+        created_at: new Date().toISOString(),
+        estado_ml: 'PENDIENTE',
+        folio: `${cfe.IdDoc.Serie}-${cfe.IdDoc.Nro}`,
+        proveedor_nombre: cfe.Emisor.RznSoc,
+        monto_total: parseFloat(cfe.Totales.MntTotal),
+        items: cfe.Detalle.Item.map(item => ({
+          descripcion_original: item.NomItem,
+          cantidad: parseFloat(item.Cantidad),
+          precio_unitario: parseFloat(item.PrecioUnitario),
+          monto_item: parseFloat(item.MontoItem),
+          producto_maestro_id: null,
+          producto_maestro_nombre: null
+        }))
       };
-    });
 
-    await bigquery
-      .dataset(DATASET_ID)
-      .table(TABLE_ID)
-      .insert(rows, { ignoreUnknownValues: true, skipInvalidRows: true });
+      // Guardar en BigQuery
+      await bigquery
+        .dataset(DATASET_ID)
+        .table('compras')
+        .insert([nuevaCompra]);
 
-    console.log(`✅ Insertadas ${rows.length} filas de CFE.`);
-    sendSuccess(res, { message: `Procesados ${rows.length} CFE(s).` });
-  } catch (err) {
-    console.error('❌ Error en inserción de BigQuery para CFE:', err);
-    sendError(res, 'Error interno insertando CFE en BigQuery.');
-  }
-});
+      sendSuccess(res, { message: 'CFE procesado y compra creada correctamente' });
+    } catch (error) {
+      console.error('Error procesando CFE:', error);
+      sendError(res, 'Error procesando CFE');
+    }
+  });
 
   req.pipe(busboy);
 });
@@ -589,11 +505,11 @@ app.post('/api/compras', async (req, res) => {
       id:           compraId,
       proveedor_id: proveedor_id,
       folio:        folio || null,
-      fecha_emision: fechaEmisionFormateada, // Campo añadido
-      centro_de_costos: centro_de_costos || null,
-      monto_total:  montoTotal,
-      created_at:   now, // Este es el timestamp de cuando se graba en el sistema
-      estado_ml:    'PENDIENTE'
+      fecha_emision: fechaEmisionFormateada // Campo añadido
+      ,centro_de_costos: centro_de_costos || null
+      ,monto_total:  montoTotal
+      ,created_at:   now // Este es el timestamp de cuando se graba en el sistema
+      ,estado_ml:    'PENDIENTE'
     };
 
     await bigquery

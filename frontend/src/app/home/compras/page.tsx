@@ -38,6 +38,12 @@ interface CompraItem {
   monto_item: number;
   producto_maestro_id?: string;
   producto_maestro_nombre?: string;
+  // Campos adicionales para CFE
+  NomItem?: string;
+  DscItem?: string;
+  Cantidad?: string;
+  PrecioUnitario?: string;
+  MontoItem?: string;
 }
 
 interface Compra {
@@ -68,13 +74,26 @@ export default function ComprasPage() {
   const fetchCompras = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get("/compras?include=items,productos_maestros");
+      const response = await apiClient.get("/compras");
       
-      // Asegurarse que los items estén presentes
-      const comprasConItems = response.data.data.map((compra: Compra) => ({
-        ...compra,
-        items: compra.items || []
-      }));
+      // Transformar los datos para asegurar la estructura correcta
+      const comprasConItems = response.data.data.map((compra: Compra) => {
+        // Si es un CFE, asegurarse de que los items estén en el formato correcto
+        if (compra.tipo === 'CFE') {
+          return {
+            ...compra,
+            items: compra.items?.map(item => ({
+              descripcion_original: item.NomItem || item.descripcion_original,
+              cantidad: parseFloat(item.Cantidad ?? String(item.cantidad)),
+              precio_unitario: parseFloat(item.PrecioUnitario || String(item.precio_unitario)),
+              monto_item: parseFloat(item.MontoItem || String(item.monto_item)),
+              producto_maestro_id: item.producto_maestro_id,
+              producto_maestro_nombre: item.producto_maestro_nombre
+            }))
+          };
+        }
+        return compra;
+      });
       
       setCompras(comprasConItems);
       setError(null);
