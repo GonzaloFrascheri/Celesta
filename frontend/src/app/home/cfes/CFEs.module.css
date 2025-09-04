@@ -122,3 +122,13 @@
   opacity: 0.5;
   cursor: default;
 }
+
+.offlineBanner {
+  background: #fff8dc;
+  border: 1px solid #ffe08a;
+  color: #7a5200;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
