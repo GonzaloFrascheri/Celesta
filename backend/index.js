@@ -11,24 +11,35 @@ const { setIntervalAsync, clearIntervalAsync } = require('set-interval-async/fix
 const app = express();
 
 // --- INICIO DE LA MODIFICACIÓN DE CORS ---
-// Define la URL exacta de tu frontend desplegado
+// Lista permitida (puede extenderse con variables de entorno)
 const allowedOrigins = [
   'https://celesta-frontend-1069223002409.us-central1.run.app',
-  'http://localhost:3000'                                     
+  'http://localhost:3000'
 ];
-// Aplica la configuración de CORS específica
+
+// Función que decide si el origen está permitido
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permite peticiones sin 'origin' (como las de Postman o apps móviles)
+    // Permite peticiones sin 'origin' (Postman, mobile, server-to-server)
     if (!origin) return callback(null, true);
-    
-    // Si el origen de la petición está en nuestra lista blanca, permite el acceso
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'La política de CORS para este sitio no permite acceso desde el origen especificado.';
-      return callback(new Error(msg), false);
+
+    // Orígenes explícitos permitidos
+    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+
+    // Permitir cualquier subdominio *.run.app (Cloud Run frontend previews)
+    try {
+      const parsed = new URL(origin);
+      const hostname = parsed.hostname || '';
+
+      if (hostname.endsWith('.run.app') || hostname.endsWith('.fly.dev') || hostname === 'localhost') {
+        return callback(null, true);
+      }
+    } catch (e) {
+      // Si no es una URL válida, denegamos abajo
     }
-    
-    return callback(null, true);
+
+    const msg = 'La política de CORS para este sitio no permite acceso desde el origen especificado.';
+    return callback(new Error(msg), false);
   }
 };
 // --- FIN DE LA MODIFICACIÓN DE CORS ---
