@@ -160,6 +160,12 @@ export default function CFEsPage() {
 
   return (
     <div className={styles.container}>
+      {offlineMode && (
+        <div className={styles.offlineBanner}>
+          <strong>Modo offline:</strong> No se pudo conectar al backend; mostrando datos de ejemplo.
+        </div>
+      )}
+
       <h1 className={styles.title}>Listado de Facturas Recibidas</h1>
 
       <div className={styles.filters}>
