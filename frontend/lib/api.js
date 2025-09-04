@@ -1,17 +1,14 @@
 // frontend/lib/api.js
 
 import axios from 'axios';
-import { getFirebaseAuth  } from './firebase'; // Importamos la instancia de auth de Firebase
+import { getFirebaseAuth  } from './firebase'; // Importamos la función que crea la instancia de auth
 
-const auth = getFirebaseAuth();
-
-const baseURL = process.env.NEXT_PUBLIC_API_URL
-  ?.replace(/\/$/, '')
+const baseURL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '';
 
 // Creamos una instancia de Axios con configuración base
 const apiClient = axios.create({
-  // Leemos la URL base de nuestro backend desde las variables de entorno
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  // Usamos la URL base ya normalizada (sin slash final)
+  baseURL: baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -22,14 +19,23 @@ const apiClient = axios.create({
 // Lo usaremos para añadir el token de autenticación a cada llamada.
 apiClient.interceptors.request.use(
   async (config) => {
-    const user = auth.currentUser;
+    try {
+      // Obtenemos la instancia de auth en tiempo de ejecución (evita problemas en SSR)
+      const auth = getFirebaseAuth();
+      const user = auth?.currentUser;
 
-    if (user) {
-      // Si hay un usuario logueado, obtenemos su ID Token
-      const token = await user.getIdToken();
-      // Añadimos el token al encabezado de la petición
-      config.headers.Authorization = `Bearer ${token}`;
+      if (user) {
+        // Si hay un usuario logueado, obtenemos su ID Token
+        const token = await user.getIdToken();
+        // Añadimos el token al encabezado de la petición
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      // No rompemos la petición por errores al leer el token
+      console.warn('No se pudo anexar token al request:', e.message || e);
     }
+
     return config;
   },
   (error) => {
@@ -39,3 +45,4 @@ apiClient.interceptors.request.use(
 );
 
 export default apiClient;
+export { baseURL };
