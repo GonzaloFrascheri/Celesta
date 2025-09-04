@@ -82,12 +82,25 @@ export default function CFEsPage() {
   const perPage = 5;
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/cfes?limit=100`)
+    const API = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
+    if (!API) {
+      console.error('NEXT_PUBLIC_API_URL no definido');
+      setLoading(false);
+      return;
+    }
+
+    fetch(`${API}/cfes?limit=100`)
       .then(r => r.json())
       .then(json => {
-        if (json.success) setCfes(json.data.items);
+        if (json && json.success) {
+          setCfes(json.data.items || []);
+        } else {
+          console.warn('Respuesta inesperada de la API CFEs:', json);
+        }
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error('Error fetching CFEs:', err);
+      })
       .finally(() => setLoading(false));
   }, []);
 
