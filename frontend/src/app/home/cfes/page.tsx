@@ -69,6 +69,7 @@ export default function CFEsPage() {
   const [cfes, setCfes]         = useState<CFE[]>([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
+  const [offlineMode, setOfflineMode] = useState(false);
 
   // State for date range filter
   const today = new Date();
@@ -81,25 +82,58 @@ export default function CFEsPage() {
   const [page, setPage] = useState(1);
   const perPage = 5;
 
+  // Mock fallback data to use when backend is unreachable
+  const MOCK_CFES: CFE[] = [
+    {
+      id: 'mock-1',
+      nombre_archivo_original: 'cfe_mock_1.xml',
+      fecha_procesamiento: { value: new Date().toISOString() },
+      emisor_rut: '12345678-9',
+      emisor_nombre: 'Empresa Demo SA',
+      receptor_rut: '98765432-1',
+      tipo_cfe: 33,
+      serie_cfe: 'A',
+      numero_cfe: 1001,
+      fecha_emision: { value: new Date().toISOString() },
+      monto_total: 1234.56,
+      moneda: 'UYU',
+      rut_receptor_caratula: null,
+      ruc_emisor_caratula: null,
+      cantidad_cfe: 1,
+      fecha_caratula: new Date().toISOString(),
+      contenido_xml: '<Factura><Detalle><Item><NomItem>Producto de prueba</NomItem><Cantidad>1</Cantidad><MontoItem>1234.56</MontoItem></Item></Detalle><Encabezado><IdDoc><Moneda>UYU</Moneda></IdDoc></Encabezado></Factura>'
+    }
+  ];
+
   useEffect(() => {
     const API = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
     if (!API) {
-      console.error('NEXT_PUBLIC_API_URL no definido');
+      console.error('NEXT_PUBLIC_API_URL no definido — activando modo offline local');
+      setCfes(MOCK_CFES);
+      setOfflineMode(true);
       setLoading(false);
       return;
     }
 
     fetch(`${API}/cfes?limit=100`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(json => {
         if (json && json.success) {
           setCfes(json.data.items || []);
         } else {
           console.warn('Respuesta inesperada de la API CFEs:', json);
+          // fallback to mock
+          setCfes(MOCK_CFES);
+          setOfflineMode(true);
         }
       })
       .catch(err => {
-        console.error('Error fetching CFEs:', err);
+        console.error('Error fetching CFEs, usando datos de fallback:', err);
+        setCfes(MOCK_CFES);
+        setOfflineMode(true);
       })
       .finally(() => setLoading(false));
   }, []);
